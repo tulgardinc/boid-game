@@ -17,33 +17,34 @@ export function makeSoA<T extends object>(
   return result;
 }
 
-export function appendSoA<T extends object>(soa: StructOfArrays<T>, obj: T) {
+type Id = number;
+
+export function appendSoA<T extends object>(
+  soa: StructOfArrays<T>,
+  obj: T,
+): Id {
+  const id = soa.len;
   for (const key in obj) {
     soa.data[key][soa.len] = obj[key];
   }
 
   soa.len += 1;
+  return id;
 }
 
-export function viewSoA<T extends object>(
-  soa: StructOfArrays<T>,
-  index: number,
-): T {
+export function viewSoA<T extends object>(soa: StructOfArrays<T>, id: Id): T {
   return new Proxy({} as T, {
     get(_, prop) {
       if (typeof prop == "string" && prop in soa) {
-        return soa.data[prop as keyof T][index];
+        return soa.data[prop as keyof T][id];
       }
     },
     set(_, prop, value) {
       if (typeof prop == "string" && prop in soa) {
-        soa.data[prop as keyof T][index] = value;
+        soa.data[prop as keyof T][id] = value;
         return true;
       }
       return false;
     },
   });
 }
-
-const vec = makeSoA(10, { x: 0, y: 0 });
-viewSoA(vec, 3).x = 10;
