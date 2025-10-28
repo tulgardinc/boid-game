@@ -1,6 +1,22 @@
 import { mat4 } from "gl-matrix";
+import { rendering } from "./state";
 
-export function bindCameraUniform(device: GPUDevice) {
+export function getCameraBindGroupLayout(device: GPUDevice) {
+  return device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX,
+        buffer: { type: "uniform" },
+      },
+    ],
+  });
+}
+
+export function getCameraBindGroup(
+  device: GPUDevice,
+  layout: GPUBindGroupLayout
+) {
   const vpMatrix = mat4.create();
   mat4.orthoZO(vpMatrix, -1920 / 2, 1920 / 2, -1080 / 2, 1080 / 2, -1, 1);
 
@@ -10,19 +26,11 @@ export function bindCameraUniform(device: GPUDevice) {
     size: (vpMatrix as Float32Array).byteLength,
   });
 
-  const cameraBindGroupLayout = device.createBindGroupLayout({
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.VERTEX,
-        buffer: { type: "uniform" },
-      },
-    ],
-  });
+  device.queue.writeBuffer(cameraUBO, 0, (vpMatrix as Float32Array).buffer);
 
-  const cameraBindGroup = device.createBindGroup({
+  return device.createBindGroup({
     label: "camera bind",
-    layout: cameraBindGroupLayout,
+    layout,
     entries: [
       {
         binding: 0,
@@ -30,6 +38,4 @@ export function bindCameraUniform(device: GPUDevice) {
       },
     ],
   });
-
-  device.queue.writeBuffer(cameraUBO, 0, (vpMatrix as Float32Array).buffer);
 }

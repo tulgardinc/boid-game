@@ -1,33 +1,25 @@
 import quadShaderCode from "./quad.wgsl?raw";
-import { rendering } from "./state";
+import { instanceBufferLayouts, rendering, vertexBufferLayouts } from "./state";
 
-export async function initTexturedQuadPipeline(
+export function get2DTransformPipeline(
   device: GPUDevice,
-  format: GPUTextureFormat
+  format: GPUTextureFormat,
+  bindGroupLayouts: GPUBindGroupLayout[]
 ) {
   const mod = device.createShaderModule({
     label: "quad renderer",
     code: quadShaderCode,
   });
-  const info = await mod.getCompilationInfo();
 
-  for (const message of info.messages) {
-    const { lineNum, linePos, message: msg, type } = message;
-    console.log(`[${type}] ${lineNum}:${linePos} - ${msg}`);
-  }
-
-  rendering.pipelines.texturedQuad = device.createRenderPipeline({
+  return device.createRenderPipeline({
     label: "textured quad",
     layout: device.createPipelineLayout({
-      bindGroupLayouts: [rendering.uniforms.camera.bindGroupLayout],
+      bindGroupLayouts,
     }),
     vertex: {
       entryPoint: "vs",
       module: mod,
-      buffers: [
-        rendering.meshes.quad.vBufferLayout,
-        rendering.meshes.quad.iBufferLayout,
-      ],
+      buffers: [vertexBufferLayouts.quad, instanceBufferLayouts.quad],
     },
     fragment: {
       entryPoint: "fs",

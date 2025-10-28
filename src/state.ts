@@ -1,6 +1,15 @@
 import { Asteroid, asteroidInit } from "./asteroid";
+import {
+  getQuadInstanceBuffer,
+  getQuadInstanceBufferLayout,
+  getQuadVertexBuffer,
+  getQuadVertexBufferLayout,
+  updateQuadGPUData,
+} from "./meshes/quad";
+import { get2DTransformPipeline } from "./pipelines";
 import { makeSoA } from "./SoA";
 import { Transform } from "./transform";
+import { getCameraBindGroup, getCameraBindGroupLayout } from "./uniforms";
 
 export const state = {
   transforms: makeSoA<Transform>(100, { x: 0, y: 0, s: 0, r: 0 }),
@@ -16,30 +25,65 @@ export const state = {
   asteroidTimer: 0,
 };
 
-type RenderingState = {
-  meshes: {
-    [key: string]: {
-      vBufferLayout: GPUVertexBufferLayout;
-      vBuffer: GPUBuffer;
-      iBufferLayout: GPUVertexBufferLayout;
-      iBuffer: GPUBuffer;
+type Renderer = {
+  instanceBuffer: GPUBuffer;
+  vertexBuffers: {
+    quad: GPUBuffer;
+  };
+  piplines: {
+    Transform2D: GPURenderPipeline;
+  };
+  bindGroups: {
+    camera: {
+      layout: GPUBindGroupLayout;
+      group: GPUBindGroup;
     };
   };
-  pipelines: {
-    [key: string]: GPURenderPipeline;
-  };
-  uniforms: {
-    [key: string]: {
-      bindGroupLayout: GPUBindGroupLayout;
-      bindGroup: GPUBindGroup;
-    };
-  };
+  renderQueue: RenderCommand[];
 };
 
-export const rendering: RenderingState = {
-  meshes: {},
-  pipelines: {},
-  uniforms: {},
+export let rendering!: Renderer;
+
+export const vertexBufferLayouts = {
+  quad: getQuadVertexBufferLayout(),
+};
+export const instanceBufferLayouts = {
+  quad: getQuadInstanceBufferLayout(),
+};
+
+export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
+  const camLayout = getCameraBindGroupLayout(device);
+  const camGroup = getCameraBindGroup(device, camLayout);
+
+  const bindGroups = {
+    camera: {
+      layout: camLayout,
+      group: camGroup,
+    },
+  };
+
+  rendering = {
+    instanceBuffer: getQuadInstanceBuffer(device),
+    vertexBuffers: {
+      quad: getQuadVertexBuffer(device),
+    },
+    piplines: {
+      Transform2D: get2DTransformPipeline(device, format, [
+        bindGroups.camera.layout,
+      ]),
+    },
+    bindGroups,
+    renderQueue: [],
+  };
+}
+
+export type RenderCommand = {
+  pipeline: keyof Renderer["piplines"];
+  vertexBuffer: keyof Renderer["vertexBuffers"];
+  bindGroup: keyof Renderer["bindGroups"];
+  instanceCount: number;
+  instanceOffset: number;
+  vertexCount: number;
 };
 
 export function deltaTimeUpdate() {

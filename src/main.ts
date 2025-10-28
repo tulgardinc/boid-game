@@ -1,20 +1,19 @@
 import { mat4 } from "gl-matrix";
-import { initializeState, state, deltaTimeUpdate } from "./state";
+import {
+  initializeState,
+  state,
+  deltaTimeUpdate,
+  initRenderer,
+  rendering,
+} from "./state";
 import "./style.css";
 import { TFToInstance } from "./transform";
 import { asteroidUpdate } from "./asteroid";
-import {
-  initializeQuadMesh,
-  renderTexturedQuads,
-  updateQuadGPUData,
-} from "./meshes/quad";
-import { initTexturedQuadPipeline } from "./pipelines";
+import { renderTexturedQuads, updateQuadGPUData } from "./meshes/quad";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <canvas width="1920" height="1080" id="canvas"></canvas>
 `;
-
-console.log("Test");
 
 async function main() {
   const adapter = await navigator.gpu?.requestAdapter();
@@ -37,11 +36,8 @@ async function main() {
     format: presentationFormat,
   });
 
-  //initializeState();
-
-  //initialize meshes
-  // initializeQuadMesh(device);
-  // await initTexturedQuadPipeline(device, presentationFormat);
+  initializeState();
+  initRenderer(device, presentationFormat);
 
   const renderPassDescriptor = {
     label: "basic canvas render pass",
@@ -57,9 +53,11 @@ async function main() {
 
   function render() {
     deltaTimeUpdate();
-    //asteroidUpdate();
+    asteroidUpdate();
 
-    //updateQuadGPUData(device);
+    updateQuadGPUData(device);
+
+    renderTexturedQuads();
 
     (
       renderPassDescriptor.colorAttachments as GPURenderPassColorAttachment[]
@@ -70,7 +68,17 @@ async function main() {
       renderPassDescriptor as GPURenderPassDescriptor
     );
 
-    //renderTexturedQuads(pass);
+    for (const command of rendering.renderQueue) {
+      pass.setPipeline(rendering.piplines[command.pipeline]);
+      pass.setBindGroup(0, rendering.bindGroups[command.bindGroup].group);
+      pass.setVertexBuffer(0, rendering.vertexBuffers[command.vertexBuffer]);
+      pass.setVertexBuffer(1, rendering.instanceBuffer);
+      pass.draw(
+        command.vertexCount,
+        command.instanceCount,
+        command.instanceOffset
+      );
+    }
 
     pass.end();
 
@@ -102,11 +110,11 @@ async function main() {
     });
   }
 
-  //window.addEventListener("resize", configureContext);
+  window.addEventListener("resize", configureContext);
 
-  //configureContext();
+  configureContext();
 
-  //render();
+  render();
 }
 
 await main();
