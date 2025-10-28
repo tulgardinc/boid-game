@@ -1,4 +1,4 @@
-import { Asteroid } from "./asteroid";
+import { Asteroid, asteroidInit } from "./asteroid";
 import { makeSoA } from "./SoA";
 import { Transform } from "./transform";
 
@@ -13,10 +13,41 @@ export const state = {
     deltaTime: 0,
     lastTime: 0,
   },
+  asteroidTimer: 0,
 };
 
-export function stateUpdate() {
+type RenderingState = {
+  meshes: {
+    [key: string]: {
+      vBufferLayout: GPUVertexBufferLayout;
+      vBuffer: GPUBuffer;
+      iBufferLayout: GPUVertexBufferLayout;
+      iBuffer: GPUBuffer;
+    };
+  };
+  pipelines: {
+    [key: string]: GPURenderPipeline;
+  };
+  uniforms: {
+    [key: string]: {
+      bindGroupLayout: GPUBindGroupLayout;
+      bindGroup: GPUBindGroup;
+    };
+  };
+};
+
+export const rendering: RenderingState = {
+  meshes: {},
+  pipelines: {},
+  uniforms: {},
+};
+
+export function deltaTimeUpdate() {
   const current = Date.now();
   state.time.deltaTime = (current - state.time.lastTime) / 1000;
   state.time.lastTime = current;
+}
+
+export function initializeState() {
+  asteroidInit();
 }

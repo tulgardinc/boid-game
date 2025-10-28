@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, Menu } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -22,6 +22,8 @@ function createWindow() {
       sandbox: true,
     },
   });
+
+  Menu.setApplicationMenu(null);
 
   const devUrl = process.env.VITE_DEV_SERVER_URL;
   if (devUrl) win.loadURL(devUrl);

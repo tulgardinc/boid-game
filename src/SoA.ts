@@ -35,12 +35,12 @@ export function appendSoA<T extends object>(
 export function viewSoA<T extends object>(soa: StructOfArrays<T>, id: Id): T {
   return new Proxy({} as T, {
     get(_, prop) {
-      if (typeof prop == "string" && prop in soa) {
+      if (prop in soa.data) {
         return soa.data[prop as keyof T][id];
       }
     },
     set(_, prop, value) {
-      if (typeof prop == "string" && prop in soa) {
+      if (prop in soa.data) {
         soa.data[prop as keyof T][id] = value;
         return true;
       }
