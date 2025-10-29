@@ -1,12 +1,13 @@
 import { Asteroid, asteroidInit } from "./asteroid";
 import {
-  getQuadInstanceBuffer,
+  initInstanceBuffer,
   getQuadInstanceBufferLayout,
   getQuadVertexBuffer,
   getQuadVertexBufferLayout,
   updateQuadGPUData,
+  getQuadIndexBuffer,
 } from "./meshes/quad";
-import { get2DTransformPipeline } from "./pipelines";
+import { get2DTransformPipeline, getShaderPos2DRed } from "./pipelines";
 import { makeSoA } from "./SoA";
 import { Transform } from "./transform";
 import { getCameraBindGroup, getCameraBindGroupLayout } from "./uniforms";
@@ -25,10 +26,13 @@ export const state = {
   asteroidTimer: 0,
 };
 
-type Renderer = {
+export type Renderer = {
   instanceBuffer: GPUBuffer;
-  vertexBuffers: {
-    quad: GPUBuffer;
+  shaders: {
+    pos2DRed: GPUShaderModule;
+  };
+  meshes: {
+    quad: Mesh;
   };
   piplines: {
     Transform2D: GPURenderPipeline;
@@ -45,41 +49,54 @@ type Renderer = {
 export let rendering!: Renderer;
 
 export const vertexBufferLayouts = {
-  quad: getQuadVertexBufferLayout(),
+  pos2D: getQuadVertexBufferLayout(),
 };
 export const instanceBufferLayouts = {
-  quad: getQuadInstanceBufferLayout(),
+  Transform2D: getQuadInstanceBufferLayout(),
+};
+
+export type Mesh = {
+  vertexBuffer: GPUBuffer;
+  indexBuffer: GPUBuffer;
+  vertexBufferLayoutId: keyof typeof vertexBufferLayouts;
 };
 
 export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
   const camLayout = getCameraBindGroupLayout(device);
   const camGroup = getCameraBindGroup(device, camLayout);
 
-  const bindGroups = {
+  const bindGroups: Renderer["bindGroups"] = {
     camera: {
       layout: camLayout,
       group: camGroup,
     },
   };
 
+  const shaders: Renderer["shaders"] = {
+    pos2DRed: getShaderPos2DRed(device),
+  };
+
   rendering = {
-    instanceBuffer: getQuadInstanceBuffer(device),
-    vertexBuffers: {
-      quad: getQuadVertexBuffer(device),
+    instanceBuffer: initInstanceBuffer(device),
+    meshes: {
+      quad: {
+        vertexBuffer: getQuadVertexBuffer(device),
+        indexBuffer: getQuadIndexBuffer(device),
+        vertexBufferLayoutId: "pos2D",
+      },
     },
     piplines: {
-      Transform2D: get2DTransformPipeline(device, format, [
-        bindGroups.camera.layout,
-      ]),
+      Transform2D: get2DTransformPipeline(device, format, bindGroups, shaders),
     },
     bindGroups,
+    shaders,
     renderQueue: [],
   };
 }
 
 export type RenderCommand = {
   pipeline: keyof Renderer["piplines"];
-  vertexBuffer: keyof Renderer["vertexBuffers"];
+  mesh: keyof Renderer["meshes"];
   bindGroup: keyof Renderer["bindGroups"];
   instanceCount: number;
   instanceOffset: number;

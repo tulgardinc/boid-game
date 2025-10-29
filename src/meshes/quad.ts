@@ -11,16 +11,19 @@ const vertices = new Float32Array([
   0.5, 0.5,
 ]);
 
+const indices = new Uint16Array([
+  0, 1, 2,
+
+  2, 1, 3,
+]);
+
 export function getQuadVertexBuffer(device: GPUDevice) {
   const vertexBuffer = device.createBuffer({
     size: vertices.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    mappedAtCreation: true,
   });
 
-  new Float32Array(vertexBuffer.getMappedRange()).set(vertices);
-  vertexBuffer.unmap();
-
+  device.queue.writeBuffer(vertexBuffer, 0, vertices.buffer);
   return vertexBuffer;
 }
 
@@ -38,7 +41,17 @@ export function getQuadVertexBufferLayout(): GPUVertexBufferLayout {
   };
 }
 
-export function getQuadInstanceBuffer(device: GPUDevice) {
+export function getQuadIndexBuffer(device: GPUDevice): GPUBuffer {
+  const indexBuffer = device.createBuffer({
+    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    size: indices.byteLength,
+  });
+
+  device.queue.writeBuffer(indexBuffer, 0, indices.buffer);
+  return indexBuffer;
+}
+
+export function initInstanceBuffer(device: GPUDevice) {
   return device.createBuffer({
     size: 4 * 4 * 100,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
@@ -77,7 +90,7 @@ export function updateQuadGPUData(device: GPUDevice) {
 export function renderTexturedQuads() {
   rendering.renderQueue.push({
     pipeline: "Transform2D",
-    vertexBuffer: "quad",
+    mesh: "quad",
     bindGroup: "camera",
     instanceCount: state.asteroids.len,
     instanceOffset: 0,

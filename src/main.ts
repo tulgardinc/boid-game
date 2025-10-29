@@ -1,13 +1,10 @@
-import { mat4 } from "gl-matrix";
 import {
   initializeState,
-  state,
   deltaTimeUpdate,
   initRenderer,
   rendering,
 } from "./state";
 import "./style.css";
-import { TFToInstance } from "./transform";
 import { asteroidUpdate } from "./asteroid";
 import { renderTexturedQuads, updateQuadGPUData } from "./meshes/quad";
 
@@ -65,20 +62,19 @@ async function main() {
     const encoder = device.createCommandEncoder({ label: "encoder" });
 
     const pass = encoder.beginRenderPass(
-      renderPassDescriptor as GPURenderPassDescriptor
+      renderPassDescriptor as GPURenderPassDescriptor,
     );
 
     for (const command of rendering.renderQueue) {
       pass.setPipeline(rendering.piplines[command.pipeline]);
       pass.setBindGroup(0, rendering.bindGroups[command.bindGroup].group);
-      pass.setVertexBuffer(0, rendering.vertexBuffers[command.vertexBuffer]);
+      pass.setVertexBuffer(0, rendering.meshes[command.mesh].vertexBuffer);
+      pass.setIndexBuffer(rendering.meshes[command.mesh].indexBuffer, "uint16");
       pass.setVertexBuffer(1, rendering.instanceBuffer);
-      pass.draw(
-        command.vertexCount,
-        command.instanceCount,
-        command.instanceOffset
-      );
+      pass.drawIndexed(6, command.instanceCount, command.instanceOffset);
     }
+
+    rendering.renderQueue.length = 0;
 
     pass.end();
 
