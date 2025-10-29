@@ -129,5 +129,5 @@ export type RenderCommand = {
   bindGroup: keyof Renderer["bindGroups"];
   instanceCount: number;
   instanceOffset: number;
-  vertexCount: number;
+  indexCount: number;
 };

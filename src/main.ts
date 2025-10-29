@@ -67,7 +67,11 @@ async function main() {
       pass.setVertexBuffer(0, renderer.meshes[command.mesh].vertexBuffer);
       pass.setIndexBuffer(renderer.meshes[command.mesh].indexBuffer, "uint16");
       pass.setVertexBuffer(1, renderer.instanceBuffer);
-      pass.drawIndexed(6, command.instanceCount, command.instanceOffset);
+      pass.drawIndexed(
+        command.indexCount,
+        command.instanceCount,
+        command.instanceOffset,
+      );
     }
 
     renderer.renderQueue.length = 0;

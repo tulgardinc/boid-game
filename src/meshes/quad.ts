@@ -50,6 +50,6 @@ export function renderTexturedQuads() {
     bindGroup: "camera",
     instanceCount: state.asteroids.len,
     instanceOffset: 0,
-    vertexCount: 4,
+    indexCount: indices.length,
   });
 }
