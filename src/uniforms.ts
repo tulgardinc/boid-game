@@ -1,5 +1,4 @@
 import { mat4 } from "gl-matrix";
-import { rendering } from "./state";
 
 export function getCameraBindGroupLayout(device: GPUDevice) {
   return device.createBindGroupLayout({
@@ -15,7 +14,7 @@ export function getCameraBindGroupLayout(device: GPUDevice) {
 
 export function getCameraBindGroup(
   device: GPUDevice,
-  layout: GPUBindGroupLayout
+  layout: GPUBindGroupLayout,
 ) {
   const vpMatrix = mat4.create();
   mat4.orthoZO(vpMatrix, -1920 / 2, 1920 / 2, -1080 / 2, 1080 / 2, -1, 1);

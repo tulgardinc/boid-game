@@ -1,12 +1,8 @@
-import {
-  initializeState,
-  deltaTimeUpdate,
-  initRenderer,
-  rendering,
-} from "./state";
+import { initializeState, deltaTimeUpdate } from "./state";
 import "./style.css";
 import { asteroidUpdate } from "./asteroid";
 import { renderTexturedQuads, updateQuadGPUData } from "./meshes/quad";
+import { initRenderer, renderer } from "./renderer";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <canvas width="1920" height="1080" id="canvas"></canvas>
@@ -65,16 +61,16 @@ async function main() {
       renderPassDescriptor as GPURenderPassDescriptor,
     );
 
-    for (const command of rendering.renderQueue) {
-      pass.setPipeline(rendering.piplines[command.pipeline]);
-      pass.setBindGroup(0, rendering.bindGroups[command.bindGroup].group);
-      pass.setVertexBuffer(0, rendering.meshes[command.mesh].vertexBuffer);
-      pass.setIndexBuffer(rendering.meshes[command.mesh].indexBuffer, "uint16");
-      pass.setVertexBuffer(1, rendering.instanceBuffer);
+    for (const command of renderer.renderQueue) {
+      pass.setPipeline(renderer.piplines[command.pipeline]);
+      pass.setBindGroup(0, renderer.bindGroups[command.bindGroup].group);
+      pass.setVertexBuffer(0, renderer.meshes[command.mesh].vertexBuffer);
+      pass.setIndexBuffer(renderer.meshes[command.mesh].indexBuffer, "uint16");
+      pass.setVertexBuffer(1, renderer.instanceBuffer);
       pass.drawIndexed(6, command.instanceCount, command.instanceOffset);
     }
 
-    rendering.renderQueue.length = 0;
+    renderer.renderQueue.length = 0;
 
     pass.end();
 

@@ -1,5 +1,9 @@
 import quadShaderCode from "./quad.wgsl?raw";
-import { instanceBufferLayouts, Renderer, vertexBufferLayouts } from "./state";
+import {
+  InstanceBufferLayouts,
+  Renderer,
+  VertexBufferLayouts,
+} from "./renderer";
 
 export function getShaderPos2DRed(device: GPUDevice) {
   return device.createShaderModule({
@@ -13,6 +17,8 @@ export function get2DTransformPipeline(
   format: GPUTextureFormat,
   bindGroupLayouts: Renderer["bindGroups"],
   shaders: Renderer["shaders"],
+  vertexBufferLayouts: VertexBufferLayouts,
+  instanceBufferLayouts: InstanceBufferLayouts,
 ): GPURenderPipeline {
   return device.createRenderPipeline({
     label: "textured quad",
@@ -22,7 +28,7 @@ export function get2DTransformPipeline(
     vertex: {
       entryPoint: "vs",
       module: shaders.pos2DRed,
-      buffers: [vertexBufferLayouts.pos2D, instanceBufferLayouts.Transform2D],
+      buffers: [vertexBufferLayouts.pos2D, instanceBufferLayouts.transform2D],
     },
     fragment: {
       entryPoint: "fs",
