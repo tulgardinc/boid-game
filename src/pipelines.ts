@@ -1,16 +1,8 @@
-import quadShaderCode from "./quad.wgsl?raw";
 import {
   InstanceBufferLayouts,
   Renderer,
   VertexBufferLayouts,
 } from "./renderer";
-
-export function getShaderPos2DRed(device: GPUDevice) {
-  return device.createShaderModule({
-    label: "draw red from 2D",
-    code: quadShaderCode,
-  });
-}
 
 export function get2DTransformPipeline(
   device: GPUDevice,

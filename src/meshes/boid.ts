@@ -3,19 +3,19 @@ import { state } from "../state";
 
 // prettier-ignore
 const vertices = new Float32Array([
+  0.0, 0.5,
   -0.5, -0.5,
+  0.0, -0.2,
   0.5, -0.5,
-  -0.5, 0.5,
-  0.5, 0.5,
 ]);
 
 // prettier-ignore
 const indices = new Uint16Array([
   0, 1, 2,
-  2, 1, 3,
+  2, 3, 0,
 ]);
 
-export function getQuadVertexBuffer(device: GPUDevice) {
+export function getBoidVertexBuffer(device: GPUDevice) {
   const vertexBuffer = device.createBuffer({
     size: vertices.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
@@ -25,7 +25,7 @@ export function getQuadVertexBuffer(device: GPUDevice) {
   return vertexBuffer;
 }
 
-export function getQuadIndexBuffer(device: GPUDevice): GPUBuffer {
+export function getBoidIndexBufer(device: GPUDevice) {
   const indexBuffer = device.createBuffer({
     usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     size: indices.byteLength,
@@ -35,12 +35,12 @@ export function getQuadIndexBuffer(device: GPUDevice): GPUBuffer {
   return indexBuffer;
 }
 
-export function renderTexturedQuads(device: GPUDevice) {
+export function renderBoids(device: GPUDevice) {
   const transformIds = [];
   const colorIds = [];
-  for (let i = 0; i < state.asteroids.len; i++) {
-    transformIds.push(state.asteroids.data.transformId[i]);
-    colorIds.push(state.asteroids.data.colorId[i]);
+  for (let i = 0; i < state.boids.len; i++) {
+    transformIds.push(state.boids.data.transformId[i]);
+    colorIds.push(state.boids.data.colorId[i]);
   }
 
   const instanceOffset = updateTransformColorGPUData(
@@ -51,9 +51,9 @@ export function renderTexturedQuads(device: GPUDevice) {
 
   renderer.renderQueue.push({
     pipeline: "transform2D",
-    mesh: "quad",
+    mesh: "boid",
     bindGroup: "camera",
-    instanceCount: state.asteroids.len,
+    instanceCount: state.boids.len,
     instanceOffset,
     indexCount: indices.length,
   });

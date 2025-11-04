@@ -1,12 +1,15 @@
 import { initializeState, deltaTimeUpdate } from "./state";
 import "./style.css";
 import { asteroidUpdate } from "./asteroid";
-import { renderTexturedQuads, updateQuadGPUData } from "./meshes/quad";
 import { initRenderer, renderer } from "./renderer";
+import { renderBoids } from "./meshes/boid";
+import { renderTexturedQuads } from "./meshes/quad";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <canvas width="1920" height="1080" id="canvas"></canvas>
 `;
+
+// TODO asteroids start appearing only after a couple of them have spawned before
 
 async function main() {
   const adapter = await navigator.gpu?.requestAdapter();
@@ -48,9 +51,8 @@ async function main() {
     deltaTimeUpdate();
     asteroidUpdate();
 
-    updateQuadGPUData(device);
-
-    renderTexturedQuads();
+    renderBoids(device);
+    renderTexturedQuads(device);
 
     (
       renderPassDescriptor.colorAttachments as GPURenderPassColorAttachment[]
@@ -62,6 +64,9 @@ async function main() {
     );
 
     for (const command of renderer.renderQueue) {
+      if (command.mesh == "quad") {
+        console.log(command.instanceOffset);
+      }
       pass.setPipeline(renderer.piplines[command.pipeline]);
       pass.setBindGroup(0, renderer.bindGroups[command.bindGroup].group);
       pass.setVertexBuffer(0, renderer.meshes[command.mesh].vertexBuffer);
@@ -70,15 +75,18 @@ async function main() {
       pass.drawIndexed(
         command.indexCount,
         command.instanceCount,
+        0,
+        0,
         command.instanceOffset,
       );
     }
 
-    renderer.renderQueue.length = 0;
-
     pass.end();
 
     const commandBuffer = encoder.finish();
+
+    renderer.instanceOffset = 0;
+    renderer.renderQueue.length = 0;
 
     device.pushErrorScope("validation");
     device.queue.submit([commandBuffer]);

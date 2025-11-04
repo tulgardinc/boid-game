@@ -1,11 +1,11 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  root: '.',
+  root: ".",
   publicDir: false,
   build: {
-    outDir: 'dist/web',
+    outDir: "dist/web",
     emptyOutDir: true,
-    target: 'es2020'
+    target: "es2020"
   }
-})
+});

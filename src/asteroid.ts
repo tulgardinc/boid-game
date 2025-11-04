@@ -1,10 +1,12 @@
 import { appendSoA } from "./SoA";
 import { viewSoA } from "./SoA";
-import { state } from "./state";
+import { ColorIds, state } from "./state";
+import { movePhysicsObject } from "./util";
 
 export type Asteroid = {
   transformId: number;
   velocityId: number;
+  colorId: number;
 };
 
 function randomStep() {
@@ -22,16 +24,16 @@ function createAsteroid() {
   let spawnY;
 
   if (randomStep() == 1) {
-    spawnX = randomStep() * (1920 / 2 + 50);
+    spawnX = randomStep() * (1920 / 2 + maxScale);
     spawnY = randomStep() * (Math.random() - 0.5) * (1080 + maxScale * 2);
   } else {
     spawnX = randomStep() * (Math.random() - 0.5) * (1920 + maxScale * 2);
-    spawnY = randomStep() * (1080 / 2 + 50);
+    spawnY = randomStep() * (1080 / 2 + maxScale);
   }
 
   const tfId = appendSoA(state.transforms, {
-    x: spawnX,
-    y: spawnY,
+    x: 0,
+    y: 0,
     s: Math.random() * (maxScale - minScale) + minScale,
     r: Math.random() * 180,
   });
@@ -50,18 +52,19 @@ function createAsteroid() {
     `spawning at: ${[spawnX, spawnY]} | velocity: ${[
       state.velocities.data.x[velId],
       state.velocities.data.y[velId],
-    ]}`
+    ]}`,
   );
 
   appendSoA(state.asteroids, {
     transformId: tfId,
     velocityId: velId,
+    colorId: ColorIds.asteroid,
   });
 }
 
 export function asteroidUpdate() {
   state.asteroidTimer += state.time.deltaTime;
-  if (state.asteroidTimer >= 4) {
+  if (state.asteroidTimer >= 1) {
     createAsteroid();
     state.asteroidTimer = 0;
   }
@@ -70,17 +73,8 @@ export function asteroidUpdate() {
     const asteroid = viewSoA(state.asteroids, i);
     const tid = asteroid.transformId;
     const vid = asteroid.velocityId;
-    viewSoA(state.transforms, tid).x +=
-      viewSoA(state.velocities, vid).x * state.time.deltaTime;
-    viewSoA(state.transforms, tid).y +=
-      viewSoA(state.velocities, vid).y * state.time.deltaTime;
-    viewSoA(state.transforms, tid).r +=
-      viewSoA(state.velocities, vid).r * state.time.deltaTime;
+    movePhysicsObject(tid, vid);
   }
 }
 
-export function renderAsteroids() {}
-
-export function asteroidInit() {
-  createAsteroid();
-}
+export function asteroidInit() {}
