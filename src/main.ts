@@ -65,7 +65,7 @@ async function main() {
 
     for (const command of renderer.renderQueue) {
       if (command.mesh == "quad") {
-        console.log(command.instanceOffset);
+        console.log(command.firstInstance);
       }
       pass.setPipeline(renderer.piplines[command.pipeline]);
       pass.setBindGroup(0, renderer.bindGroups[command.bindGroup].group);
@@ -77,7 +77,7 @@ async function main() {
         command.instanceCount,
         0,
         0,
-        command.instanceOffset,
+        command.firstInstance,
       );
     }
 
@@ -86,6 +86,7 @@ async function main() {
     const commandBuffer = encoder.finish();
 
     renderer.instanceOffset = 0;
+    renderer.instanceCount = 0;
     renderer.renderQueue.length = 0;
 
     device.pushErrorScope("validation");

@@ -12,7 +12,7 @@ function createBoid() {
   const tId = appendSoA(state.transforms, {
     x: 0,
     y: 0,
-    s: 100,
+    s: 50,
     r: 0,
   });
 

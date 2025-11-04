@@ -4,9 +4,9 @@ import { state } from "../state";
 // prettier-ignore
 const vertices = new Float32Array([
   0.0, 0.5,
-  -0.5, -0.5,
-  0.0, -0.2,
-  0.5, -0.5,
+  -0.45, -0.5,
+  0.0, -0.3,
+  0.45, -0.5,
 ]);
 
 // prettier-ignore
@@ -43,7 +43,7 @@ export function renderBoids(device: GPUDevice) {
     colorIds.push(state.boids.data.colorId[i]);
   }
 
-  const instanceOffset = updateTransformColorGPUData(
+  const firstInstance = updateTransformColorGPUData(
     device,
     transformIds,
     colorIds,
@@ -54,7 +54,7 @@ export function renderBoids(device: GPUDevice) {
     mesh: "boid",
     bindGroup: "camera",
     instanceCount: state.boids.len,
-    instanceOffset,
+    firstInstance,
     indexCount: indices.length,
   });
 }

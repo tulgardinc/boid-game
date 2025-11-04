@@ -32,8 +32,8 @@ function createAsteroid() {
   }
 
   const tfId = appendSoA(state.transforms, {
-    x: 0,
-    y: 0,
+    x: spawnX,
+    y: spawnY,
     s: Math.random() * (maxScale - minScale) + minScale,
     r: Math.random() * 180,
   });

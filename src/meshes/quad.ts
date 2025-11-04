@@ -43,7 +43,7 @@ export function renderTexturedQuads(device: GPUDevice) {
     colorIds.push(state.asteroids.data.colorId[i]);
   }
 
-  const instanceOffset = updateTransformColorGPUData(
+  const firstInstance = updateTransformColorGPUData(
     device,
     transformIds,
     colorIds,
@@ -54,7 +54,7 @@ export function renderTexturedQuads(device: GPUDevice) {
     mesh: "quad",
     bindGroup: "camera",
     instanceCount: state.asteroids.len,
-    instanceOffset,
+    firstInstance,
     indexCount: indices.length,
   });
 }

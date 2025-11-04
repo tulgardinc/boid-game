@@ -6,6 +6,7 @@ import { state } from "./state";
 import { getCameraBindGroup, getCameraBindGroupLayout } from "./uniforms";
 
 export type Renderer = {
+  instanceCount: number;
   instanceOffset: number;
   instanceBuffer: GPUBuffer;
   shaders: {
@@ -108,6 +109,7 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
   };
 
   renderer = {
+    instanceCount: 0,
     instanceOffset: 0,
     instanceBuffer: initInstanceBuffer(device),
     meshes: {
@@ -145,7 +147,7 @@ export type RenderCommand = {
   mesh: keyof Renderer["meshes"];
   bindGroup: keyof Renderer["bindGroups"];
   instanceCount: number;
-  instanceOffset: number;
+  firstInstance: number;
   indexCount: number;
 };
 
@@ -178,10 +180,12 @@ export function updateTransformColorGPUData(
     0,
     result.byteLength,
   );
-  const off = renderer.instanceOffset;
   renderer.instanceOffset += result.byteLength;
 
-  return off;
+  const firstInstance = renderer.instanceCount;
+  renderer.instanceCount += transformIds.length;
+
+  return firstInstance;
 }
 
 function getShaderPos2DRed(device: GPUDevice) {
