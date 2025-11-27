@@ -1,11 +1,9 @@
 import { appendSoA } from "./SoA";
 import { viewSoA } from "./SoA";
 import { ColorIds, state } from "./state";
-import { movePhysicsObject } from "./util";
 
 export type Asteroid = {
-  transformId: number;
-  velocityId: number;
+  physicsId: number;
   colorId: number;
 };
 
@@ -31,14 +29,14 @@ function createAsteroid() {
     spawnY = randomStep() * (1080 / 2 + maxScale);
   }
 
-  const tfId = appendSoA(state.transforms, {
+  const tId = appendSoA(state.transforms, {
     x: spawnX,
     y: spawnY,
     s: Math.random() * (maxScale - minScale) + minScale,
     r: Math.random() * 180,
   });
 
-  const velId = appendSoA(state.velocities, {
+  const vId = appendSoA(state.velocities, {
     x:
       -(Math.abs(spawnX) / spawnX) *
       (Math.random() * (maxSpeed - minSpeed) + minSpeed),
@@ -48,16 +46,20 @@ function createAsteroid() {
     r: randomStep() * Math.random() * (50 - 10) + 10,
   });
 
-  console.log(
-    `spawning at: ${[spawnX, spawnY]} | velocity: ${[
-      state.velocities.data.x[velId],
-      state.velocities.data.y[velId],
-    ]}`,
-  );
+  const aId = appendSoA(state.accelerations, {
+    x: 0,
+    y: 0,
+    r: 0,
+  });
+
+  const pId = appendSoA(state.physicsObjects, {
+    transformId: tId,
+    velocityId: vId,
+    accelerationId: aId,
+  });
 
   appendSoA(state.asteroids, {
-    transformId: tfId,
-    velocityId: velId,
+    physicsId: pId,
     colorId: ColorIds.asteroid,
   });
 }
@@ -65,15 +67,12 @@ function createAsteroid() {
 export function asteroidUpdate() {
   state.asteroidTimer += state.time.deltaTime;
   if (state.asteroidTimer >= 1) {
-    createAsteroid();
+    //createAsteroid();
     state.asteroidTimer = 0;
   }
 
   for (let i = 0; i < state.asteroids.len; i++) {
     const asteroid = viewSoA(state.asteroids, i);
-    const tid = asteroid.transformId;
-    const vid = asteroid.velocityId;
-    movePhysicsObject(tid, vid);
   }
 }
 

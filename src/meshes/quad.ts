@@ -39,7 +39,8 @@ export function renderTexturedQuads(device: GPUDevice) {
   const transformIds = [];
   const colorIds = [];
   for (let i = 0; i < state.asteroids.len; i++) {
-    transformIds.push(state.asteroids.data.transformId[i]);
+    const pid = state.asteroids.data.physicsId[i];
+    transformIds.push(state.physicsObjects.data.transformId[pid]);
     colorIds.push(state.asteroids.data.colorId[i]);
   }
 

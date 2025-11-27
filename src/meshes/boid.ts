@@ -39,7 +39,8 @@ export function renderBoids(device: GPUDevice) {
   const transformIds = [];
   const colorIds = [];
   for (let i = 0; i < state.boids.len; i++) {
-    transformIds.push(state.boids.data.transformId[i]);
+    const pid = state.boids.data.physicsId[i];
+    transformIds.push(state.physicsObjects.data.transformId[pid]);
     colorIds.push(state.boids.data.colorId[i]);
   }
 

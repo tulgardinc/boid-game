@@ -4,12 +4,12 @@ import { asteroidUpdate } from "./asteroid";
 import { initRenderer, renderer } from "./renderer";
 import { renderBoids } from "./meshes/boid";
 import { renderTexturedQuads } from "./meshes/quad";
+import { boidUpdate } from "./boid";
+import { physicsUpdate } from "./util";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <canvas width="1920" height="1080" id="canvas"></canvas>
 `;
-
-// TODO asteroids start appearing only after a couple of them have spawned before
 
 async function main() {
   const adapter = await navigator.gpu?.requestAdapter();
@@ -48,9 +48,17 @@ async function main() {
   };
 
   function render() {
+    // system logic
     deltaTimeUpdate();
-    asteroidUpdate();
 
+    // game logic
+    asteroidUpdate();
+    boidUpdate();
+
+    // physics
+    physicsUpdate();
+
+    // renderer
     renderBoids(device);
     renderTexturedQuads(device);
 
@@ -64,9 +72,6 @@ async function main() {
     );
 
     for (const command of renderer.renderQueue) {
-      if (command.mesh == "quad") {
-        console.log(command.firstInstance);
-      }
       pass.setPipeline(renderer.piplines[command.pipeline]);
       pass.setBindGroup(0, renderer.bindGroups[command.bindGroup].group);
       pass.setVertexBuffer(0, renderer.meshes[command.mesh].vertexBuffer);

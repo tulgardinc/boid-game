@@ -1,21 +1,33 @@
+import { Acceleration } from "./acceleration";
 import { Asteroid, asteroidInit } from "./asteroid";
 import { Boid, boidInit } from "./boid";
 import { Color } from "./color";
 import { appendSoA, makeSoA } from "./SoA";
 import { Transform } from "./transform";
+import { Velocity } from "./velocity";
+
+type PhysicsObject = {
+  velocityId: number;
+  accelerationId: number;
+  transformId: number;
+};
 
 export const state = {
   transforms: makeSoA<Transform>(100, { x: 0, y: 0, s: 0, r: 0 }),
   velocities: makeSoA<Velocity>(100, { x: 0, y: 0, r: 0 }),
+  accelerations: makeSoA<Acceleration>(100, { x: 0, y: 0, r: 0 }),
   colors: makeSoA<Color>(100, { r: 1, g: 1, b: 1 }),
-  asteroids: makeSoA<Asteroid>(100, {
-    transformId: -1,
+  physicsObjects: makeSoA<PhysicsObject>(100, {
     velocityId: -1,
+    accelerationId: -1,
+    transformId: -1,
+  }),
+  asteroids: makeSoA<Asteroid>(100, {
+    physicsId: -1,
     colorId: -1,
   }),
   boids: makeSoA<Boid>(100, {
-    transformId: -1,
-    velocityId: -1,
+    physicsId: -1,
     colorId: -1,
   }),
   time: {
@@ -23,6 +35,10 @@ export const state = {
     lastTime: 0,
   },
   asteroidTimer: 0,
+  mousePos: {
+    x: 0,
+    y: 0,
+  },
 };
 
 export function deltaTimeUpdate() {
@@ -50,7 +66,17 @@ function colorsInit() {
   });
 }
 
+function registerEvents() {
+  window.addEventListener("mousemove", (e) => {
+    state.mousePos.x = e.clientX;
+    state.mousePos.y = e.clientY;
+  });
+}
+
 export function initializeState() {
+  state.time.lastTime = Date.now();
+
+  registerEvents();
   colorsInit();
 
   asteroidInit();
