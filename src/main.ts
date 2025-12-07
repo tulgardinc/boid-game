@@ -4,7 +4,7 @@ import { asteroidUpdate } from "./asteroid";
 import { initRenderer, renderer } from "./renderer";
 import { renderBoids } from "./meshes/boid";
 import { renderTexturedQuads } from "./meshes/quad";
-import { boidUpdate } from "./boid";
+import { updateBoids } from "./boid";
 import { physicsUpdate } from "./util";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
@@ -53,7 +53,7 @@ async function main() {
 
     // game logic
     asteroidUpdate();
-    boidUpdate();
+    updateBoids();
 
     // physics
     physicsUpdate();
@@ -68,7 +68,7 @@ async function main() {
     const encoder = device.createCommandEncoder({ label: "encoder" });
 
     const pass = encoder.beginRenderPass(
-      renderPassDescriptor as GPURenderPassDescriptor,
+      renderPassDescriptor as GPURenderPassDescriptor
     );
 
     for (const command of renderer.renderQueue) {
@@ -82,7 +82,7 @@ async function main() {
         command.instanceCount,
         0,
         0,
-        command.firstInstance,
+        command.firstInstance
       );
     }
 

@@ -5,7 +5,7 @@ export type StructOfArrays<T> = {
 
 export function makeSoA<T extends object>(
   capacity: number,
-  defaults: T,
+  defaults: T
 ): StructOfArrays<T> {
   const result = {
     len: 0,
@@ -21,7 +21,7 @@ type Id = number;
 
 export function appendSoA<T extends object>(
   soa: StructOfArrays<T>,
-  obj: T,
+  obj: T
 ): Id {
   const id = soa.len;
   for (const key in obj) {
@@ -30,21 +30,4 @@ export function appendSoA<T extends object>(
 
   soa.len += 1;
   return id;
-}
-
-export function viewSoA<T extends object>(soa: StructOfArrays<T>, id: Id): T {
-  return new Proxy({} as T, {
-    get(_, prop) {
-      if (prop in soa.data) {
-        return soa.data[prop as keyof T][id];
-      }
-    },
-    set(_, prop, value) {
-      if (prop in soa.data) {
-        soa.data[prop as keyof T][id] = value;
-        return true;
-      }
-      return false;
-    },
-  });
 }

@@ -1,5 +1,4 @@
 import { appendSoA } from "./SoA";
-import { viewSoA } from "./SoA";
 import { ColorIds, state } from "./state";
 
 export type Asteroid = {
@@ -72,7 +71,7 @@ export function asteroidUpdate() {
   }
 
   for (let i = 0; i < state.asteroids.len; i++) {
-    const asteroid = viewSoA(state.asteroids, i);
+    // const asteroid = viewSoA(state.asteroids, i);
   }
 }
 

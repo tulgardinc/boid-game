@@ -1,26 +1,32 @@
-import { viewSoA } from "./SoA";
 import { state } from "./state";
 
 export function physicsUpdate() {
+  const tx = state.transforms.data.x;
+  const ty = state.transforms.data.y;
+  const tr = state.transforms.data.r;
+  const ax = state.accelerations.data.x;
+  const ay = state.accelerations.data.y;
+  const ar = state.accelerations.data.r;
+  const vx = state.velocities.data.x;
+  const vy = state.velocities.data.y;
+  const vr = state.velocities.data.r;
+
   for (let i = 0; i < state.physicsObjects.len; i++) {
-    const {
-      transformId: tid,
-      velocityId: vid,
-      accelerationId: aid,
-    } = viewSoA(state.physicsObjects, i);
+    const tid = state.physicsObjects.data.transformId[i];
+    const aid = state.physicsObjects.data.accelerationId[i];
+    const vid = state.physicsObjects.data.velocityId[i];
 
-    viewSoA(state.velocities, vid).x +=
-      viewSoA(state.accelerations, aid).x * state.time.deltaTime;
-    viewSoA(state.velocities, vid).y +=
-      viewSoA(state.accelerations, aid).y * state.time.deltaTime;
-    viewSoA(state.velocities, vid).r +=
-      viewSoA(state.accelerations, aid).r * state.time.deltaTime;
+    vx[vid] += ax[aid] * state.time.deltaTime;
+    vy[vid] += ay[aid] * state.time.deltaTime;
+    vr[vid] += ar[aid] * state.time.deltaTime;
 
-    viewSoA(state.transforms, tid).x +=
-      viewSoA(state.velocities, vid).x * state.time.deltaTime;
-    viewSoA(state.transforms, tid).y +=
-      viewSoA(state.velocities, vid).y * state.time.deltaTime;
-    viewSoA(state.transforms, tid).r +=
-      viewSoA(state.velocities, vid).r * state.time.deltaTime;
+    tx[tid] += vx[vid] * state.time.deltaTime;
+    ty[tid] += vy[vid] * state.time.deltaTime;
+    tr[tid] = tr[tid] + ((vr[vid] * state.time.deltaTime) % 360);
   }
+}
+
+export function angleDiff(a: number, b: number) {
+  let d = a - b;
+  return ((d + 180) % 360) - 180;
 }
