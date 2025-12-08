@@ -4,6 +4,7 @@ import { ColorIds, state } from "./state";
 export type Asteroid = {
   physicsId: number;
   colorId: number;
+  health: number;
 };
 
 function randomStep() {
@@ -60,13 +61,14 @@ function createAsteroid() {
   appendSoA(state.asteroids, {
     physicsId: pId,
     colorId: ColorIds.asteroid,
+    health: 100,
   });
 }
 
 export function asteroidUpdate() {
   state.asteroidTimer += state.time.deltaTime;
   if (state.asteroidTimer >= 1) {
-    //createAsteroid();
+    createAsteroid();
     state.asteroidTimer = 0;
   }
 

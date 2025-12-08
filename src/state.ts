@@ -1,6 +1,7 @@
 import { Acceleration } from "./acceleration";
 import { Asteroid, asteroidInit } from "./asteroid";
 import { Boid, boidInit } from "./boid";
+import { Collider, ColliderType } from "./collider";
 import { Color } from "./color";
 import { appendSoA, makeSoA } from "./SoA";
 import { Transform } from "./transform";
@@ -10,6 +11,11 @@ type PhysicsObject = {
   velocityId: number;
   accelerationId: number;
   transformId: number;
+};
+
+type Collision = {
+  colliderAId: number;
+  colliderBId: number;
 };
 
 export const state = {
@@ -25,11 +31,19 @@ export const state = {
   asteroids: makeSoA<Asteroid>(100, {
     physicsId: -1,
     colorId: -1,
+    health: 100,
   }),
   boids: makeSoA<Boid>(100, {
     physicsId: -1,
     colorId: -1,
   }),
+  colliders: makeSoA<Collider>(100, {
+    halfHeight: 0,
+    halfWidth: 0,
+    transformId: -1,
+    type: ColliderType.Asteroid,
+  }),
+  collisions: new Array<Collision>(),
   time: {
     deltaTime: 0,
     lastTime: 0,

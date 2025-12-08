@@ -1,4 +1,3 @@
-import { wrap } from "module";
 import { appendSoA } from "./SoA";
 import { ColorIds, state } from "./state";
 import { angleDiff } from "./util";

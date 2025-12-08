@@ -5,7 +5,7 @@ import { initRenderer, renderer } from "./renderer";
 import { renderBoids } from "./meshes/boid";
 import { renderTexturedQuads } from "./meshes/quad";
 import { updateBoids } from "./boid";
-import { physicsUpdate } from "./util";
+import { detectCollisions, physicsUpdate } from "./util";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <canvas width="1920" height="1080" id="canvas"></canvas>
@@ -57,6 +57,11 @@ async function main() {
 
     // physics
     physicsUpdate();
+
+    // collision check
+    detectCollisions();
+
+    // handle collisions
 
     // renderer
     renderBoids(device);

@@ -1,3 +1,4 @@
+import { ColliderType } from "./collider";
 import { state } from "./state";
 
 export function physicsUpdate() {
@@ -23,6 +24,72 @@ export function physicsUpdate() {
     tx[tid] += vx[vid] * state.time.deltaTime;
     ty[tid] += vy[vid] * state.time.deltaTime;
     tr[tid] = tr[tid] + ((vr[vid] * state.time.deltaTime) % 360);
+  }
+}
+
+export function detectCollisions() {
+  for (let i = 0; i < state.colliders.len - 1; i++) {
+    const colAHeight = state.colliders.data.halfHeight[i];
+    const colAWidth = state.colliders.data.halfWidth[i];
+    const colATid = state.colliders.data.transformId[i];
+    const colAx = state.transforms.data.x[colATid];
+    const colAy = state.transforms.data.y[colATid];
+    const colAs = state.transforms.data.s[colATid];
+
+    const colALeft = colAx - colAWidth * colAs;
+    const colARight = colAx + colAWidth * colAs;
+    const colATop = colAy + colAHeight * colAs;
+    const colABottom = colAy - colAHeight * colAs;
+
+    for (let j = i + 1; j < state.colliders.len; j++) {
+      const colBHeight = state.colliders.data.halfHeight[j];
+      const colBWidth = state.colliders.data.halfWidth[j];
+      const colBTid = state.colliders.data.transformId[j];
+      const colBx = state.transforms.data.x[colBTid];
+      const colBy = state.transforms.data.y[colBTid];
+      const colBs = state.transforms.data.s[colBTid];
+
+      const colBLeft = colBx - colBWidth * colBs;
+      const colBRight = colBx + colBWidth * colBs;
+      const colBTop = colBy + colBHeight * colBs;
+      const colBBottom = colBy - colBHeight * colBs;
+
+      if (
+        colALeft < colBRight &&
+        colARight > colBLeft &&
+        colABottom < colBTop &&
+        colATop > colBBottom
+      ) {
+        state.collisions.push({
+          colliderAId: i,
+          colliderBId: j,
+        });
+      }
+    }
+  }
+}
+
+export function handleCollisions() {
+  for (const collision of state.collisions) {
+    const colAId = collision.colliderAId;
+    const colBId = collision.colliderBId;
+
+    let boidColId;
+    if (
+      state.colliders.data.type[colAId] == ColliderType.Boid &&
+      state.colliders.data.type[colBId] == ColliderType.Asteroid
+    ) {
+      boidColId = colAId;
+    } else if (
+      state.colliders.data.type[colAId] == ColliderType.Asteroid &&
+      state.colliders.data.type[colBId] == ColliderType.Boid
+    ) {
+      boidColId = colBId;
+    } else {
+      continue;
+    }
+
+    const boidPid = console.log("HIT");
   }
 }
 
