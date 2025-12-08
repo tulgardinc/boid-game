@@ -1,58 +1,33 @@
-import { ColliderType } from "./collider";
-import { state } from "./state";
+import { EntityType, state } from "./state";
 
 export function physicsUpdate() {
-  const tx = state.transforms.data.x;
-  const ty = state.transforms.data.y;
-  const tr = state.transforms.data.r;
-  const ax = state.accelerations.data.x;
-  const ay = state.accelerations.data.y;
-  const ar = state.accelerations.data.r;
-  const vx = state.velocities.data.x;
-  const vy = state.velocities.data.y;
-  const vr = state.velocities.data.r;
+  for (let i = 0; i < state.baseEntities.len; i++) {
+    const d = state.baseEntities.data;
 
-  for (let i = 0; i < state.physicsObjects.len; i++) {
-    const tid = state.physicsObjects.data.transformId[i];
-    const aid = state.physicsObjects.data.accelerationId[i];
-    const vid = state.physicsObjects.data.velocityId[i];
+    d.velX[i] += d.aclX[i] * state.time.deltaTime;
+    d.velY[i] += d.aclY[i] * state.time.deltaTime;
+    d.velR[i] += d.aclR[i] * state.time.deltaTime;
 
-    vx[vid] += ax[aid] * state.time.deltaTime;
-    vy[vid] += ay[aid] * state.time.deltaTime;
-    vr[vid] += ar[aid] * state.time.deltaTime;
-
-    tx[tid] += vx[vid] * state.time.deltaTime;
-    ty[tid] += vy[vid] * state.time.deltaTime;
-    tr[tid] = tr[tid] + ((vr[vid] * state.time.deltaTime) % 360);
+    d.x[i] += d.velX[i] * state.time.deltaTime;
+    d.y[i] += d.velY[i] * state.time.deltaTime;
+    d.r[i] = d.r[i] + ((d.velR[i] * state.time.deltaTime) % 360);
   }
 }
 
 export function detectCollisions() {
-  for (let i = 0; i < state.colliders.len - 1; i++) {
-    const colAHeight = state.colliders.data.halfHeight[i];
-    const colAWidth = state.colliders.data.halfWidth[i];
-    const colATid = state.colliders.data.transformId[i];
-    const colAx = state.transforms.data.x[colATid];
-    const colAy = state.transforms.data.y[colATid];
-    const colAs = state.transforms.data.s[colATid];
+  const d = state.baseEntities.data;
 
-    const colALeft = colAx - colAWidth * colAs;
-    const colARight = colAx + colAWidth * colAs;
-    const colATop = colAy + colAHeight * colAs;
-    const colABottom = colAy - colAHeight * colAs;
+  for (let i = 0; i < state.baseEntities.len - 1; i++) {
+    const colALeft = d.x[i] - d.colHalfWidth[i] * d.s[i];
+    const colARight = d.x[i] + d.colHalfWidth[i] * d.s[i];
+    const colATop = d.y[i] + d.colHalfHeight[i] * d.s[i];
+    const colABottom = d.y[i] - d.colHalfHeight[i] * d.s[i];
 
-    for (let j = i + 1; j < state.colliders.len; j++) {
-      const colBHeight = state.colliders.data.halfHeight[j];
-      const colBWidth = state.colliders.data.halfWidth[j];
-      const colBTid = state.colliders.data.transformId[j];
-      const colBx = state.transforms.data.x[colBTid];
-      const colBy = state.transforms.data.y[colBTid];
-      const colBs = state.transforms.data.s[colBTid];
-
-      const colBLeft = colBx - colBWidth * colBs;
-      const colBRight = colBx + colBWidth * colBs;
-      const colBTop = colBy + colBHeight * colBs;
-      const colBBottom = colBy - colBHeight * colBs;
+    for (let j = i + 1; j < state.baseEntities.len; j++) {
+      const colBLeft = d.x[j] - d.colHalfWidth[j] * d.s[j];
+      const colBRight = d.x[j] + d.colHalfWidth[j] * d.s[j];
+      const colBTop = d.y[j] + d.colHalfHeight[j] * d.s[j];
+      const colBBottom = d.y[j] - d.colHalfHeight[j] * d.s[j];
 
       if (
         colALeft < colBRight &&
@@ -61,8 +36,8 @@ export function detectCollisions() {
         colATop > colBBottom
       ) {
         state.collisions.push({
-          colliderAId: i,
-          colliderBId: j,
+          entityAId: i,
+          entityBId: j,
         });
       }
     }
@@ -70,27 +45,34 @@ export function detectCollisions() {
 }
 
 export function handleCollisions() {
-  for (const collision of state.collisions) {
-    const colAId = collision.colliderAId;
-    const colBId = collision.colliderBId;
+  const d = state.baseEntities.data;
 
-    let boidColId;
-    if (
-      state.colliders.data.type[colAId] == ColliderType.Boid &&
-      state.colliders.data.type[colBId] == ColliderType.Asteroid
-    ) {
-      boidColId = colAId;
+  for (const collision of state.collisions) {
+    const aId = collision.entityAId;
+    const bId = collision.entityBId;
+
+    let boidId;
+    if (d.type[aId] == EntityType.Boid && d.type[bId] == EntityType.Asteroid) {
+      boidId = aId;
     } else if (
-      state.colliders.data.type[colAId] == ColliderType.Asteroid &&
-      state.colliders.data.type[colBId] == ColliderType.Boid
+      d.type[aId] == EntityType.Asteroid &&
+      d.type[bId] == EntityType.Boid
     ) {
-      boidColId = colBId;
+      boidId = bId;
     } else {
       continue;
     }
 
-    const boidPid = console.log("HIT");
+    const speed = Math.sqrt(
+      d.velX[boidId] * d.velX[boidId] + d.velY[boidId] * d.velY[boidId]
+    );
+
+    if (speed > 500) {
+      console.log("HIT");
+    }
   }
+
+  state.collisions.length = 0;
 }
 
 export function angleDiff(a: number, b: number) {

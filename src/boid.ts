@@ -1,41 +1,32 @@
 import { appendSoA } from "./SoA";
-import { ColorIds, state } from "./state";
+import { EntityType, state } from "./state";
 import { angleDiff } from "./util";
 
-export type Boid = {
-  physicsId: number;
-  colorId: number;
-};
-
 function createBoid(pos: { x: number; y: number }) {
-  const tId = appendSoA(state.transforms, {
+  const baseId = appendSoA(state.baseEntities, {
+    type: EntityType.Boid,
+
     x: pos.x,
     y: pos.y,
     s: 50,
     r: 0,
-  });
 
-  const vId = appendSoA(state.velocities, {
-    x: 0,
-    y: 0,
-    r: 0,
-  });
+    velX: 0,
+    velY: 0,
+    velR: 0,
 
-  const aId = appendSoA(state.accelerations, {
-    x: 0,
-    y: 0,
-    r: 0,
-  });
+    aclX: 0,
+    aclY: 0,
+    aclR: 0,
 
-  const pId = appendSoA(state.physicsObjects, {
-    transformId: tId,
-    velocityId: vId,
-    accelerationId: aId,
+    color: state.colors.boid,
+
+    colHalfWidth: 0.5,
+    colHalfHeight: 0.5,
   });
 
   appendSoA(state.boids, {
-    physicsId: pId,
-    colorId: ColorIds.boid,
+    baseEnitityId: baseId,
   });
 }
 
@@ -45,25 +36,14 @@ export function updateBoids() {
     y: ((((state.mousePos.y / window.innerHeight) * 2 - 1) * 1080) / 2) * -1,
   };
 
-  const tx = state.transforms.data.x;
-  const ty = state.transforms.data.y;
-  const tr = state.transforms.data.r;
-  const ax = state.accelerations.data.x;
-  const ay = state.accelerations.data.y;
-  const ar = state.accelerations.data.r;
-  const vx = state.velocities.data.x;
-  const vy = state.velocities.data.y;
-  const vr = state.velocities.data.r;
+  const d = state.baseEntities.data;
 
   for (let i = 0; i < state.boids.len; i++) {
-    const pid = state.boids.data.physicsId[i];
-    const tid = state.physicsObjects.data.transformId[pid];
-    const aid = state.physicsObjects.data.accelerationId[pid];
-    const vid = state.physicsObjects.data.velocityId[pid];
+    const eId = state.boids.data.baseEnitityId[i];
 
     const dir = { x: 0, y: 0 };
-    dir.x = target.x - tx[tid];
-    dir.y = target.y - ty[tid];
+    dir.x = target.x - d.x[eId];
+    dir.y = target.y - d.y[eId];
     const dist = Math.hypot(dir.x, dir.y);
     dir.x /= dist;
     dir.y /= dist;
@@ -73,22 +53,22 @@ export function updateBoids() {
       targetAngle += 360;
     }
 
-    const error = angleDiff(targetAngle, tr[tid]);
+    const error = angleDiff(targetAngle, d.r[eId]);
 
     const Kp = 28;
     const Kd = 8;
 
-    ar[aid] = Kp * error - Kd * vr[vid];
+    d.aclR[eId] = Kp * error - Kd * d.velR[eId];
 
-    const rad = (tr[tid] * Math.PI) / 180;
+    const rad = (d.r[eId] * Math.PI) / 180;
     const fwdx = -Math.sin(rad);
     const fwdy = Math.cos(rad);
 
     const sidex = fwdy;
     const sidey = -fwdx;
 
-    const vForward = vx[vid] * fwdx + vy[vid] * fwdy;
-    const vSide = vx[vid] * sidex + vy[vid] * sidey;
+    const vForward = d.velX[eId] * fwdx + d.velY[eId] * fwdy;
+    const vSide = d.velX[eId] * sidex + d.velY[eId] * sidey;
 
     const thrust = 300;
     const axThrust = fwdx * thrust;
@@ -107,8 +87,8 @@ export function updateBoids() {
     const axLong = longForce * fwdx;
     const ayLong = longForce * fwdy;
 
-    ax[aid] = axThrust + axSide + axLong;
-    ay[aid] = ayThrust + aySide + ayLong;
+    d.aclX[eId] = axThrust + axSide + axLong;
+    d.aclY[eId] = ayThrust + aySide + ayLong;
   }
 }
 

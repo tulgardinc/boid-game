@@ -36,19 +36,12 @@ export function getQuadIndexBuffer(device: GPUDevice): GPUBuffer {
 }
 
 export function renderTexturedQuads(device: GPUDevice) {
-  const transformIds = [];
-  const colorIds = [];
+  const asteroidIds = [];
   for (let i = 0; i < state.asteroids.len; i++) {
-    const pid = state.asteroids.data.physicsId[i];
-    transformIds.push(state.physicsObjects.data.transformId[pid]);
-    colorIds.push(state.asteroids.data.colorId[i]);
+    asteroidIds.push(state.asteroids.data.baseEnitityId[i]);
   }
 
-  const firstInstance = updateTransformColorGPUData(
-    device,
-    transformIds,
-    colorIds,
-  );
+  const firstInstance = updateTransformColorGPUData(device, asteroidIds);
 
   renderer.renderQueue.push({
     pipeline: "transform2D",

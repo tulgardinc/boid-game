@@ -1,48 +1,78 @@
-import { Acceleration } from "./acceleration";
-import { Asteroid, asteroidInit } from "./asteroid";
-import { Boid, boidInit } from "./boid";
-import { Collider, ColliderType } from "./collider";
+import { asteroidInit } from "./asteroid";
+import { boidInit } from "./boid";
 import { Color } from "./color";
-import { appendSoA, makeSoA } from "./SoA";
-import { Transform } from "./transform";
-import { Velocity } from "./velocity";
+import { makeSoA } from "./SoA";
 
-type PhysicsObject = {
-  velocityId: number;
-  accelerationId: number;
-  transformId: number;
+export type Collision = {
+  entityAId: number;
+  entityBId: number;
 };
 
-type Collision = {
-  colliderAId: number;
-  colliderBId: number;
+export enum EntityType {
+  Asteroid,
+  Boid,
+}
+
+export type GameEntity = {
+  type: EntityType;
+  x: number;
+  y: number;
+  s: number;
+  r: number;
+
+  velX: number;
+  velY: number;
+  velR: number;
+
+  aclX: number;
+  aclY: number;
+  aclR: number;
+
+  color: Color;
+
+  colHalfWidth: number;
+  colHalfHeight: number;
+};
+
+export type Asteroid = {
+  baseEnitityId: number;
+};
+
+export type Boid = {
+  baseEnitityId: number;
 };
 
 export const state = {
-  transforms: makeSoA<Transform>(100, { x: 0, y: 0, s: 0, r: 0 }),
-  velocities: makeSoA<Velocity>(100, { x: 0, y: 0, r: 0 }),
-  accelerations: makeSoA<Acceleration>(100, { x: 0, y: 0, r: 0 }),
-  colors: makeSoA<Color>(100, { r: 1, g: 1, b: 1 }),
-  physicsObjects: makeSoA<PhysicsObject>(100, {
-    velocityId: -1,
-    accelerationId: -1,
-    transformId: -1,
+  baseEntities: makeSoA<GameEntity>(100, {
+    type: EntityType.Asteroid,
+    x: 0,
+    y: 0,
+    s: 0,
+    r: 0,
+    velX: 0,
+    velY: 0,
+    velR: 0,
+    aclX: 0,
+    aclY: 0,
+    aclR: 0,
+    color: {
+      r: 0,
+      g: 0,
+      b: 0,
+    },
+    colHalfWidth: 0,
+    colHalfHeight: 0,
   }),
   asteroids: makeSoA<Asteroid>(100, {
-    physicsId: -1,
-    colorId: -1,
-    health: 100,
+    baseEnitityId: 0,
   }),
   boids: makeSoA<Boid>(100, {
-    physicsId: -1,
-    colorId: -1,
+    baseEnitityId: 0,
   }),
-  colliders: makeSoA<Collider>(100, {
-    halfHeight: 0,
-    halfWidth: 0,
-    transformId: -1,
-    type: ColliderType.Asteroid,
-  }),
+  colors: {
+    boid: { r: 1, g: 1, b: 1 },
+    asteroid: { r: 1, g: 0, b: 0.2 },
+  },
   collisions: new Array<Collision>(),
   time: {
     deltaTime: 0,
@@ -61,25 +91,6 @@ export function deltaTimeUpdate() {
   state.time.lastTime = current;
 }
 
-export const ColorIds = {
-  boid: 0,
-  asteroid: 1,
-} as const;
-
-function colorsInit() {
-  appendSoA(state.colors, {
-    r: 1,
-    g: 1,
-    b: 1,
-  });
-
-  appendSoA(state.colors, {
-    r: 1,
-    g: 0,
-    b: 0,
-  });
-}
-
 function registerEvents() {
   window.addEventListener("mousemove", (e) => {
     state.mousePos.x = e.clientX;
@@ -91,7 +102,6 @@ export function initializeState() {
   state.time.lastTime = Date.now();
 
   registerEvents();
-  colorsInit();
 
   asteroidInit();
   boidInit();

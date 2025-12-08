@@ -133,7 +133,7 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
         bindGroups,
         shaders,
         vertexBufferLayouts,
-        instanceBufferLayouts,
+        instanceBufferLayouts
       ),
     },
     bindGroups,
@@ -153,24 +153,21 @@ export type RenderCommand = {
 
 export function updateTransformColorGPUData(
   device: GPUDevice,
-  transformIds: number[],
-  colorIds: number[],
+  entityIds: number[]
 ) {
-  if (transformIds.length !== colorIds.length)
-    throw new Error("Index out of range");
+  const result = new Float32Array(entityIds.length * 7);
+  const d = state.baseEntities.data;
 
   let i = 0;
-  const result = new Float32Array(transformIds.length * 7);
-  for (let j = 0; j < transformIds.length; j++) {
-    const tId = transformIds[j];
-    result[i++] = state.transforms.data.x[tId];
-    result[i++] = state.transforms.data.y[tId];
-    result[i++] = state.transforms.data.s[tId];
-    result[i++] = (state.transforms.data.r[tId] * Math.PI) / 180;
-    const cId = colorIds[j];
-    result[i++] = state.colors.data.r[cId];
-    result[i++] = state.colors.data.g[cId];
-    result[i++] = state.colors.data.b[cId];
+  for (const eid of entityIds) {
+    result[i++] = d.x[eid];
+    result[i++] = d.y[eid];
+    result[i++] = d.s[eid];
+    result[i++] = (d.r[eid] * Math.PI) / 180;
+    const col = d.color[eid];
+    result[i++] = col.r;
+    result[i++] = col.g;
+    result[i++] = col.b;
   }
 
   device.queue.writeBuffer(
@@ -178,12 +175,12 @@ export function updateTransformColorGPUData(
     renderer.instanceOffset,
     result.buffer,
     0,
-    result.byteLength,
+    result.byteLength
   );
   renderer.instanceOffset += result.byteLength;
 
   const firstInstance = renderer.instanceCount;
-  renderer.instanceCount += transformIds.length;
+  renderer.instanceCount += entityIds.length;
 
   return firstInstance;
 }

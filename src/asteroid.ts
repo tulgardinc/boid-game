@@ -1,11 +1,5 @@
 import { appendSoA } from "./SoA";
-import { ColorIds, state } from "./state";
-
-export type Asteroid = {
-  physicsId: number;
-  colorId: number;
-  health: number;
-};
+import { EntityType, state } from "./state";
 
 function randomStep() {
   return Math.random() > 0.5 ? 1 : -1;
@@ -29,39 +23,34 @@ function createAsteroid() {
     spawnY = randomStep() * (1080 / 2 + maxScale);
   }
 
-  const tId = appendSoA(state.transforms, {
+  const baseId = appendSoA(state.baseEntities, {
+    type: EntityType.Asteroid,
+
     x: spawnX,
     y: spawnY,
     s: Math.random() * (maxScale - minScale) + minScale,
     r: Math.random() * 180,
-  });
 
-  const vId = appendSoA(state.velocities, {
-    x:
+    velX:
       -(Math.abs(spawnX) / spawnX) *
       (Math.random() * (maxSpeed - minSpeed) + minSpeed),
-    y:
+    velY:
       -(Math.abs(spawnY) / spawnY) *
       (Math.random() * (maxSpeed - minSpeed) + minSpeed),
-    r: randomStep() * Math.random() * (50 - 10) + 10,
-  });
+    velR: randomStep() * Math.random() * (50 - 10) + 10,
 
-  const aId = appendSoA(state.accelerations, {
-    x: 0,
-    y: 0,
-    r: 0,
-  });
+    aclX: 0,
+    aclY: 0,
+    aclR: 0,
 
-  const pId = appendSoA(state.physicsObjects, {
-    transformId: tId,
-    velocityId: vId,
-    accelerationId: aId,
+    color: state.colors.asteroid,
+
+    colHalfWidth: 0.5,
+    colHalfHeight: 0.5,
   });
 
   appendSoA(state.asteroids, {
-    physicsId: pId,
-    colorId: ColorIds.asteroid,
-    health: 100,
+    baseEnitityId: baseId,
   });
 }
 
