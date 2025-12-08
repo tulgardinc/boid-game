@@ -51,24 +51,34 @@ export function handleCollisions() {
     const aId = collision.entityAId;
     const bId = collision.entityBId;
 
-    let boidId;
+    let boidBaseId;
+    let astrBaseId;
     if (d.type[aId] == EntityType.Boid && d.type[bId] == EntityType.Asteroid) {
-      boidId = aId;
+      boidBaseId = aId;
+      astrBaseId = bId;
     } else if (
       d.type[aId] == EntityType.Asteroid &&
       d.type[bId] == EntityType.Boid
     ) {
-      boidId = bId;
+      astrBaseId = aId;
+      boidBaseId = bId;
     } else {
       continue;
     }
 
     const speed = Math.sqrt(
-      d.velX[boidId] * d.velX[boidId] + d.velY[boidId] * d.velY[boidId]
+      d.velX[boidBaseId] * d.velX[boidBaseId] +
+        d.velY[boidBaseId] * d.velY[boidBaseId]
     );
 
-    if (speed > 500) {
-      console.log("HIT");
+    const astrId = d.typeId[astrBaseId];
+
+    if (speed > 500 && state.asteroids.data.hurtCooldown[astrId] <= 0) {
+      d.color[astrBaseId] = state.colors.asteroidHurt;
+      const astrId = d.typeId[astrBaseId];
+      state.asteroids.data.health[astrId] -= 20;
+      state.asteroids.data.damageColorTimer[astrId] = 0.2;
+      state.asteroids.data.hurtCooldown[astrId] = 0.5;
     }
   }
 

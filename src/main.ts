@@ -65,8 +65,8 @@ async function main() {
     handleCollisions();
 
     // renderer
-    renderBoids(device);
     renderTexturedQuads(device);
+    renderBoids(device);
 
     (
       renderPassDescriptor.colorAttachments as GPURenderPassColorAttachment[]

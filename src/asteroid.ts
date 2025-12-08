@@ -25,6 +25,7 @@ function createAsteroid() {
 
   const baseId = appendSoA(state.baseEntities, {
     type: EntityType.Asteroid,
+    typeId: 0,
 
     x: spawnX,
     y: spawnY,
@@ -49,9 +50,14 @@ function createAsteroid() {
     colHalfHeight: 0.5,
   });
 
-  appendSoA(state.asteroids, {
+  const typeId = appendSoA(state.asteroids, {
     baseEnitityId: baseId,
+    health: 0,
+    damageColorTimer: null,
+    hurtCooldown: 0,
   });
+
+  state.baseEntities.data.typeId[baseId] = typeId;
 }
 
 export function asteroidUpdate() {
@@ -62,7 +68,20 @@ export function asteroidUpdate() {
   }
 
   for (let i = 0; i < state.asteroids.len; i++) {
-    // const asteroid = viewSoA(state.asteroids, i);
+    const ad = state.asteroids.data;
+    if (ad.damageColorTimer[i]) {
+      if (ad.damageColorTimer[i]! > 0) {
+        ad.damageColorTimer[i]! -= state.time.deltaTime;
+      } else {
+        ad.damageColorTimer[i] = null;
+        const bId = ad.baseEnitityId[i];
+        state.baseEntities.data.color[bId] = state.colors.asteroid;
+      }
+    }
+
+    if (ad.hurtCooldown[i] > 0) {
+      ad.hurtCooldown[i] -= state.time.deltaTime;
+    }
   }
 }
 

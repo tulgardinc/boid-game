@@ -5,10 +5,11 @@ import { angleDiff } from "./util";
 function createBoid(pos: { x: number; y: number }) {
   const baseId = appendSoA(state.baseEntities, {
     type: EntityType.Boid,
+    typeId: 0,
 
     x: pos.x,
     y: pos.y,
-    s: 50,
+    s: 25,
     r: 0,
 
     velX: 0,
@@ -25,9 +26,11 @@ function createBoid(pos: { x: number; y: number }) {
     colHalfHeight: 0.5,
   });
 
-  appendSoA(state.boids, {
+  const typeId = appendSoA(state.boids, {
     baseEnitityId: baseId,
   });
+
+  state.baseEntities.data.typeId[baseId] = typeId;
 }
 
 export function updateBoids() {
@@ -70,7 +73,7 @@ export function updateBoids() {
     const vForward = d.velX[eId] * fwdx + d.velY[eId] * fwdy;
     const vSide = d.velX[eId] * sidex + d.velY[eId] * sidey;
 
-    const thrust = 300;
+    const thrust = 400;
     const axThrust = fwdx * thrust;
     const ayThrust = fwdy * thrust;
 
@@ -94,5 +97,5 @@ export function updateBoids() {
 
 export function boidInit() {
   createBoid({ x: 0, y: 0 });
-  createBoid({ x: -50, y: 0 });
+  //createBoid({ x: -50, y: 0 });
 }

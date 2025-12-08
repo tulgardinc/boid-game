@@ -15,6 +15,8 @@ export enum EntityType {
 
 export type GameEntity = {
   type: EntityType;
+  typeId: number;
+
   x: number;
   y: number;
   s: number;
@@ -36,6 +38,9 @@ export type GameEntity = {
 
 export type Asteroid = {
   baseEnitityId: number;
+  health: number;
+  damageColorTimer: number | null;
+  hurtCooldown: number;
 };
 
 export type Boid = {
@@ -45,6 +50,7 @@ export type Boid = {
 export const state = {
   baseEntities: makeSoA<GameEntity>(100, {
     type: EntityType.Asteroid,
+    typeId: 0,
     x: 0,
     y: 0,
     s: 0,
@@ -65,6 +71,9 @@ export const state = {
   }),
   asteroids: makeSoA<Asteroid>(100, {
     baseEnitityId: 0,
+    health: 0,
+    damageColorTimer: null,
+    hurtCooldown: 0,
   }),
   boids: makeSoA<Boid>(100, {
     baseEnitityId: 0,
@@ -72,6 +81,7 @@ export const state = {
   colors: {
     boid: { r: 1, g: 1, b: 1 },
     asteroid: { r: 1, g: 0, b: 0.2 },
+    asteroidHurt: { r: 1, g: 1, b: 1 },
   },
   collisions: new Array<Collision>(),
   time: {
