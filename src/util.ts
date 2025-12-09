@@ -46,10 +46,16 @@ export function detectCollisions() {
 
 export function handleCollisions() {
   const d = state.baseEntities.data;
+  const curCollisions = new Set<string>();
 
   for (const collision of state.collisions) {
     const aId = collision.entityAId;
     const bId = collision.entityBId;
+
+    const key = `${aId}-${bId}`;
+    curCollisions.add(key);
+
+    if (state.prevCollisions.has(key)) continue;
 
     let boidBaseId;
     let astrBaseId;
@@ -71,16 +77,23 @@ export function handleCollisions() {
         d.velY[boidBaseId] * d.velY[boidBaseId]
     );
 
-    const astrId = state.baseToType[astrBaseId];
+    const astrId = state.baseEntities.data.typeId[astrBaseId];
 
     if (speed > 500 && state.asteroids.data.hurtCooldown[astrId] <= 0) {
       d.color[astrBaseId] = state.colors.asteroidHurt;
-      state.asteroids.data.health[astrId] -= 20;
+      state.asteroids.data.health[astrId] -= 50;
       state.asteroids.data.damageColorTimer[astrId] = 0.15;
       state.asteroids.data.hurtCooldown[astrId] = 0.5;
     }
   }
 
+  for (const key of state.prevCollisions) {
+    if (!curCollisions.has(key)) {
+      state.prevCollisions.delete(key);
+    }
+  }
+
+  state.prevCollisions = curCollisions;
   state.collisions.length = 0;
 }
 

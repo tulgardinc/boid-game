@@ -25,14 +25,14 @@ function createBoid(pos: { x: number; y: number }) {
 
     colHalfWidth: 0.5,
     colHalfHeight: 0.5,
+    typeId: 0,
   });
 
   const typeId = appendSoA(state.boids, {
-    baseEnitityId: baseId,
+    baseId,
   });
 
-  state.baseToType[baseId] = typeId;
-  state.typeToBase[typeId] = baseId;
+  state.baseEntities.data.typeId[baseId] = typeId;
 }
 
 export function updateBoids() {
@@ -44,7 +44,7 @@ export function updateBoids() {
   const d = state.baseEntities.data;
 
   for (let i = 0; i < state.boids.len; i++) {
-    const baseId = state.typeToBase[i];
+    const baseId = state.boids.data.baseId[i];
 
     const dir = { x: 0, y: 0 };
     dir.x = target.x - d.x[baseId];
@@ -75,14 +75,14 @@ export function updateBoids() {
     const vForward = d.velX[baseId] * fwdx + d.velY[baseId] * fwdy;
     const vSide = d.velX[baseId] * sidex + d.velY[baseId] * sidey;
 
-    const thrust = 400;
+    const thrust = 450;
     const axThrust = fwdx * thrust;
     const ayThrust = fwdy * thrust;
 
-    const sideFriction = 3;
+    const sideFriction = 6;
     const sideForce = -vSide * sideFriction;
 
-    const backFriction = 5;
+    const backFriction = 10;
     const longFricCoeff = vForward > 0 ? 0 : backFriction;
     const longForce = -vForward * longFricCoeff;
 

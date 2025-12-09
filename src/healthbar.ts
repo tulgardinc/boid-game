@@ -31,14 +31,15 @@ export function createHealthBar(
 
     colHalfWidth: 0.5,
     colHalfHeight: 0.5,
+    typeId: 0,
   });
 
   const outerTypeId = appendSoA(state.outerHealthBars, {
     targetTypeId: asteroidTypeId,
+    baseId: outerBaseId,
   });
 
-  state.baseToType[outerBaseId] = outerTypeId;
-  state.typeToBase[outerTypeId] = outerBaseId;
+  state.baseEntities.data.typeId[outerBaseId] = outerTypeId;
 
   const innerBaseId = appendSoA(state.baseEntities, {
     type: EntityType.HealthBarOuter,
@@ -62,14 +63,15 @@ export function createHealthBar(
 
     colHalfWidth: 0.5,
     colHalfHeight: 0.5,
+    typeId: 0,
   });
 
   const innerTypeId = appendSoA(state.innerHealthBars, {
     outerTypeId,
+    baseId: innerBaseId,
   });
 
-  state.baseToType[innerBaseId] = innerTypeId;
-  state.typeToBase[innerTypeId] = innerBaseId;
+  state.baseEntities.data.typeId[innerBaseId] = innerTypeId;
 }
 
 export function updateHealthBars() {
@@ -82,9 +84,9 @@ export function updateHealthBars() {
     const astId = outD.targetTypeId[outId];
     const health = state.asteroids.data.health[astId];
 
-    const astBaseId = state.typeToBase[astId];
-    const outBaseId = state.typeToBase[outId];
-    const inBaseId = state.typeToBase[inId];
+    const astBaseId = state.asteroids.data.baseId[astId];
+    const outBaseId = state.outerHealthBars.data.baseId[outId];
+    const inBaseId = state.innerHealthBars.data.baseId[inId];
 
     d.x[outBaseId] = d.x[astBaseId];
     d.y[outBaseId] = d.y[astBaseId] + VERTICAL_OFFSET;

@@ -52,16 +52,17 @@ function createAsteroid() {
 
     colHalfWidth: 0.5,
     colHalfHeight: 0.5,
+    typeId: 0,
   });
 
   const typeId = appendSoA(state.asteroids, {
     health: 100,
     damageColorTimer: null,
     hurtCooldown: 0,
+    baseId,
   });
 
-  state.baseToType[baseId] = typeId;
-  state.typeToBase[typeId] = baseId;
+  state.baseEntities.data.typeId[baseId] = typeId;
 
   createHealthBar({ x: spawnX, y: spawnY }, typeId);
 }
@@ -76,8 +77,9 @@ export function asteroidUpdate() {
   }
 
   for (let i = 0; i < state.asteroids.len; i++) {
+    const bId = state.asteroids.data.baseId[i];
     if (ad.health[i] <= 0) {
-      scheduleForDelete(state.typeToBase[i], state.asteroids);
+      scheduleForDelete(state.asteroids.data.baseId[i], state.asteroids);
       continue;
     }
 
@@ -86,7 +88,6 @@ export function asteroidUpdate() {
         ad.damageColorTimer[i]! -= state.time.deltaTime;
       } else {
         ad.damageColorTimer[i] = null;
-        const bId = state.typeToBase[i];
         state.baseEntities.data.color[bId] = state.colors.asteroid;
       }
     }

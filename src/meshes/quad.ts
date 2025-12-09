@@ -38,13 +38,13 @@ export function getQuadIndexBuffer(device: GPUDevice): GPUBuffer {
 export function renderTexturedQuads(device: GPUDevice) {
   const quadIds = [];
   for (let i = 0; i < state.asteroids.len; i++) {
-    quadIds.push(state.typeToBase[i]);
+    quadIds.push(state.asteroids.data.baseId[i]);
   }
   for (let i = 0; i < state.outerHealthBars.len; i++) {
-    quadIds.push(state.typeToBase[i]);
+    quadIds.push(state.outerHealthBars.data.baseId[i]);
   }
   for (let i = 0; i < state.innerHealthBars.len; i++) {
-    quadIds.push(state.typeToBase[i]);
+    quadIds.push(state.innerHealthBars.data.baseId[i]);
   }
 
   const firstInstance = updateTransformColorGPUData(device, quadIds);
