@@ -90,12 +90,6 @@ export function updateHealthBars() {
     const astEntityId = outD.targetEntityId[outIdx];
     const astBaseIdx = state.idToBaseLookup[astEntityId];
 
-    if (astBaseIdx === undefined) {
-      scheduleForDelete(outEntityId);
-      scheduleForDelete(inEntityId);
-      continue;
-    }
-
     const astIdx = d.typeId[astBaseIdx];
 
     const health = state.asteroids.data.health[astIdx];

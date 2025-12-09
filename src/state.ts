@@ -66,7 +66,7 @@ export type InnerHealthBar = {
 export const state = {
   currentId: 0,
   freedIds: Array<number>(),
-  idToBaseLookup: Array<number | undefined>(),
+  idToBaseLookup: Array<number>(),
   baseEntities: makeSoA<BaseEntity>(100, {
     type: EntityType.Asteroid,
     x: 0,
@@ -168,7 +168,6 @@ function destroyEntity(entityIdToDelete: number) {
   if (state.baseEntities.len == 0) return;
 
   const baseIdToDelete = state.idToBaseLookup[entityIdToDelete];
-  if (baseIdToDelete === undefined) return;
   const baseLast = state.baseEntities.len - 1;
 
   const typeIdToDelete = state.baseEntities.data.typeId[baseIdToDelete];
@@ -185,8 +184,6 @@ function destroyEntity(entityIdToDelete: number) {
   const typeLast = typeTableForEntityToDelete.len - 1;
 
   swapDelete(baseIdToDelete, state.baseEntities);
-
-  state.idToBaseLookup[entityIdToDelete] = undefined;
 
   if (baseIdToDelete != baseLast) {
     state.idToBaseLookup[entityIdLast] = baseIdToDelete;
