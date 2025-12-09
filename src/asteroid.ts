@@ -1,6 +1,6 @@
 import { createHealthBar } from "./healthbar";
 import { appendSoA } from "./SoA";
-import { EntityType, scheduleForDelete, state } from "./state";
+import { addBaseEntity, EntityType, scheduleForDelete, state } from "./state";
 
 function randomStep() {
   return Math.random() > 0.5 ? 1 : -1;
@@ -26,7 +26,7 @@ function createAsteroid() {
 
   const scale = Math.random() * (maxScale - minScale) + minScale;
 
-  const baseId = appendSoA(state.baseEntities, {
+  const { baseId, entityId } = addBaseEntity({
     type: EntityType.Asteroid,
 
     x: spawnX,
@@ -64,7 +64,7 @@ function createAsteroid() {
 
   state.baseEntities.data.typeId[baseId] = typeId;
 
-  createHealthBar({ x: spawnX, y: spawnY }, typeId);
+  createHealthBar({ x: spawnX, y: spawnY }, entityId);
 }
 
 export function asteroidUpdate() {
@@ -79,7 +79,7 @@ export function asteroidUpdate() {
   for (let i = 0; i < state.asteroids.len; i++) {
     const bId = state.asteroids.data.baseId[i];
     if (ad.health[i] <= 0) {
-      scheduleForDelete(state.asteroids.data.baseId[i], state.asteroids);
+      scheduleForDelete(state.baseEntities.data.entityId[bId]);
       continue;
     }
 

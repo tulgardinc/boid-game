@@ -1,9 +1,9 @@
 import { appendSoA } from "./SoA";
-import { EntityType, state } from "./state";
+import { addBaseEntity, EntityType, state } from "./state";
 import { angleDiff } from "./util";
 
 function createBoid(pos: { x: number; y: number }) {
-  const baseId = appendSoA(state.baseEntities, {
+  const { baseId } = addBaseEntity({
     type: EntityType.Boid,
 
     x: pos.x,

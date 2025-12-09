@@ -99,5 +99,5 @@ export function handleCollisions() {
 
 export function angleDiff(a: number, b: number) {
   let d = a - b;
-  return ((d + 180) % 360) - 180;
+  return ((((d + 180) % 360) + 360) % 360) - 180;
 }

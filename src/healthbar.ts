@@ -1,5 +1,5 @@
 import { appendSoA } from "./SoA";
-import { EntityType, state } from "./state";
+import { addBaseEntity, EntityType, scheduleForDelete, state } from "./state";
 
 const OUTER_WIDTH = 150;
 const INNER_MAX_WIDTH = 148;
@@ -7,9 +7,9 @@ const VERTICAL_OFFSET = 150;
 
 export function createHealthBar(
   pos: { x: number; y: number },
-  asteroidTypeId: number
+  asteroidEntityId: number
 ) {
-  const outerBaseId = appendSoA(state.baseEntities, {
+  const { baseId: outerBaseId, entityId: outerEntityId } = addBaseEntity({
     type: EntityType.HealthBarOuter,
 
     x: pos.x,
@@ -35,14 +35,14 @@ export function createHealthBar(
   });
 
   const outerTypeId = appendSoA(state.outerHealthBars, {
-    targetTypeId: asteroidTypeId,
+    targetEntityId: asteroidEntityId,
     baseId: outerBaseId,
   });
 
   state.baseEntities.data.typeId[outerBaseId] = outerTypeId;
 
-  const innerBaseId = appendSoA(state.baseEntities, {
-    type: EntityType.HealthBarOuter,
+  const { baseId: innerBaseId } = addBaseEntity({
+    type: EntityType.HealthBarInnner,
 
     x: pos.x,
     y: pos.y,
@@ -67,8 +67,8 @@ export function createHealthBar(
   });
 
   const innerTypeId = appendSoA(state.innerHealthBars, {
-    outerTypeId,
     baseId: innerBaseId,
+    outerEntityId,
   });
 
   state.baseEntities.data.typeId[innerBaseId] = innerTypeId;
@@ -79,21 +79,39 @@ export function updateHealthBars() {
   const outD = state.outerHealthBars.data;
   const d = state.baseEntities.data;
 
-  for (let inId = 0; inId < state.innerHealthBars.len; inId++) {
-    const outId = inD.outerTypeId[inId];
-    const astId = outD.targetTypeId[outId];
-    const health = state.asteroids.data.health[astId];
+  for (let inIdx = 0; inIdx < state.innerHealthBars.len; inIdx++) {
+    const inBaseIdx = state.innerHealthBars.data.baseId[inIdx];
+    const inEntityId = d.entityId[inBaseIdx];
 
-    const astBaseId = state.asteroids.data.baseId[astId];
-    const outBaseId = state.outerHealthBars.data.baseId[outId];
-    const inBaseId = state.innerHealthBars.data.baseId[inId];
+    const outEntityId = inD.outerEntityId[inIdx];
+    const outBaseIdx = state.idToBaseLookup[outEntityId]!;
+    const outIdx = d.typeId[outBaseIdx];
 
-    d.x[outBaseId] = d.x[astBaseId];
-    d.y[outBaseId] = d.y[astBaseId] + VERTICAL_OFFSET;
+    const astEntityId = outD.targetEntityId[outIdx];
+    const astBaseIdx = state.idToBaseLookup[astEntityId];
 
-    d.y[inBaseId] = d.y[outBaseId];
+    if (astBaseIdx === undefined) {
+      scheduleForDelete(outEntityId);
+      scheduleForDelete(inEntityId);
+      continue;
+    }
+
+    const astIdx = d.typeId[astBaseIdx];
+
+    const health = state.asteroids.data.health[astIdx];
+
+    if (health <= 0) {
+      scheduleForDelete(outEntityId);
+      scheduleForDelete(inEntityId);
+      continue;
+    }
+
+    d.x[outBaseIdx] = d.x[astBaseIdx];
+    d.y[outBaseIdx] = d.y[astBaseIdx] + VERTICAL_OFFSET;
+
+    d.y[inBaseIdx] = d.y[outBaseIdx];
     const newWidth = INNER_MAX_WIDTH * (health / 100);
-    d.x[inBaseId] = d.x[outBaseId] - (INNER_MAX_WIDTH - newWidth) / 2;
-    d.scaleX[inBaseId] = newWidth;
+    d.x[inBaseIdx] = d.x[outBaseIdx] - (INNER_MAX_WIDTH - newWidth) / 2;
+    d.scaleX[inBaseIdx] = newWidth;
   }
 }

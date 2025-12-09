@@ -1,3 +1,5 @@
+import { InnerHealthBar } from "./state";
+
 export type StructOfArrays<T> = {
   data: { [K in keyof T]: T[K][] };
   len: number;

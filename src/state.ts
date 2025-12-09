@@ -1,7 +1,7 @@
 import { asteroidInit } from "./asteroid";
 import { boidInit } from "./boid";
 import { Color } from "./color";
-import { makeSoA, StructOfArrays, swapDelete } from "./SoA";
+import { appendSoA, makeSoA, StructOfArrays, swapDelete } from "./SoA";
 
 export type Collision = {
   entityAId: number;
@@ -15,7 +15,9 @@ export enum EntityType {
   HealthBarInnner,
 }
 
-export type GameEntity = {
+export type BaseEntity = {
+  entityId: number;
+
   type: EntityType;
   typeId: number;
 
@@ -53,21 +55,19 @@ export type Boid = {
 
 export type OuterHealthBar = {
   baseId: number;
-  targetTypeId: number;
+  targetEntityId: number;
 };
 
 export type InnerHealthBar = {
   baseId: number;
-  outerTypeId: number;
-};
-
-type DeleteEntry<T extends object> = {
-  baseId: number;
-  typeTable: StructOfArrays<T>;
+  outerEntityId: number;
 };
 
 export const state = {
-  baseEntities: makeSoA<GameEntity>(100, {
+  currentId: 0,
+  freedIds: Array<number>(),
+  idToBaseLookup: Array<number | undefined>(),
+  baseEntities: makeSoA<BaseEntity>(100, {
     type: EntityType.Asteroid,
     x: 0,
     y: 0,
@@ -88,6 +88,7 @@ export const state = {
     scaleX: 0,
     scaleY: 0,
     typeId: 0,
+    entityId: 0,
   }),
   asteroids: makeSoA<Asteroid>(100, {
     health: 0,
@@ -99,11 +100,11 @@ export const state = {
     baseId: 0,
   }),
   outerHealthBars: makeSoA<OuterHealthBar>(100, {
-    targetTypeId: 0,
+    targetEntityId: 0,
     baseId: 0,
   }),
   innerHealthBars: makeSoA<InnerHealthBar>(100, {
-    outerTypeId: 0,
+    outerEntityId: 0,
     baseId: 0,
   }),
   colors: {
@@ -119,7 +120,7 @@ export const state = {
     deltaTime: 0,
     lastTime: 0,
   },
-  deleteSchedule: Array<DeleteEntry<any>>(),
+  deleteSchedule: Array<number>(),
   asteroidTimer: 0,
   mousePos: {
     x: 0,
@@ -127,43 +128,88 @@ export const state = {
   },
 };
 
-function destroyEntity<T extends object & { baseId: number }>(
-  baseIdToDelete: number,
-  typeTable: StructOfArrays<T>
-) {
-  if (state.baseEntities.len == 0) return;
+export function addBaseEntity(baseEntity: Omit<BaseEntity, "entityId">) {
+  let baseId = 0;
+  let entityId = 0;
+  if (state.freedIds.length > 0) {
+    entityId = state.freedIds.pop()!;
+    baseId = appendSoA(state.baseEntities, {
+      ...baseEntity,
+      entityId: entityId,
+    });
+    state.idToBaseLookup[entityId!] = baseId;
+  } else {
+    entityId = state.currentId;
+    baseId = appendSoA(state.baseEntities, {
+      ...baseEntity,
+      entityId: state.currentId,
+    });
+    state.idToBaseLookup[state.currentId] = baseId;
+    state.currentId++;
+  }
 
-  const lastIdx = state.baseEntities.len - 1;
-  const typeIdToDelete = state.baseEntities.data.typeId[baseIdToDelete];
-  const typeIdOfLastE = state.baseEntities.data.typeId[lastIdx];
-  const typeIdLast = typeTable.len - 1;
-  const baseIdOfLastType = typeTable.data.baseId[typeIdLast];
+  return { baseId, entityId };
+}
 
-  swapDelete(baseIdToDelete, state.baseEntities);
-
-  if (state.baseEntities.len > 0)
-    typeTable.data.baseId[typeIdOfLastE] = baseIdToDelete;
-
-  swapDelete(typeIdToDelete, typeTable);
-
-  if (typeTable.len > 0) {
-    state.baseEntities.data.typeId[baseIdOfLastType] = typeIdToDelete;
+function getTableFromKind(type: EntityType) {
+  switch (type) {
+    case EntityType.Asteroid:
+      return state.asteroids;
+    case EntityType.Boid:
+      return state.boids;
+    case EntityType.HealthBarInnner:
+      return state.innerHealthBars;
+    case EntityType.HealthBarOuter:
+      return state.outerHealthBars;
   }
 }
 
-export function scheduleForDelete<T extends object>(
-  baseId: number,
-  typeTable: StructOfArrays<T>
-) {
-  state.deleteSchedule.push({
-    baseId,
-    typeTable,
-  });
+function destroyEntity(entityIdToDelete: number) {
+  if (state.baseEntities.len == 0) return;
+
+  const baseIdToDelete = state.idToBaseLookup[entityIdToDelete];
+  if (baseIdToDelete === undefined) return;
+  const baseLast = state.baseEntities.len - 1;
+
+  const typeIdToDelete = state.baseEntities.data.typeId[baseIdToDelete];
+  const typeIdOfLastE = state.baseEntities.data.typeId[baseLast];
+  const entityIdLast = state.baseEntities.data.entityId[baseLast];
+
+  const typeTableForEntityToDelete = getTableFromKind(
+    state.baseEntities.data.type[baseIdToDelete]
+  );
+  const typeTableForLastEntity = getTableFromKind(
+    state.baseEntities.data.type[baseLast]
+  );
+
+  const typeLast = typeTableForEntityToDelete.len - 1;
+
+  swapDelete(baseIdToDelete, state.baseEntities);
+
+  state.idToBaseLookup[entityIdToDelete] = undefined;
+
+  if (baseIdToDelete != baseLast) {
+    state.idToBaseLookup[entityIdLast] = baseIdToDelete;
+    typeTableForLastEntity.data.baseId[typeIdOfLastE] = baseIdToDelete;
+  }
+
+  swapDelete(typeIdToDelete, typeTableForEntityToDelete);
+
+  if (typeIdToDelete != typeLast) {
+    const updatedBaseIdOfLastType =
+      typeTableForEntityToDelete.data.baseId[typeIdToDelete];
+    state.baseEntities.data.typeId[updatedBaseIdOfLastType] = typeIdToDelete;
+  }
+}
+
+export function scheduleForDelete(entityId: number) {
+  state.deleteSchedule.push(entityId);
 }
 
 export function deleteScheduledEntities() {
-  for (const de of state.deleteSchedule) {
-    destroyEntity(de.baseId, de.typeTable);
+  for (const id of state.deleteSchedule) {
+    destroyEntity(id);
+    state.freedIds.push(id);
   }
   state.deleteSchedule.length = 0;
 }
