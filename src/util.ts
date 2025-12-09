@@ -18,16 +18,16 @@ export function detectCollisions() {
   const d = state.baseEntities.data;
 
   for (let i = 0; i < state.baseEntities.len - 1; i++) {
-    const colALeft = d.x[i] - d.colHalfWidth[i] * d.s[i];
-    const colARight = d.x[i] + d.colHalfWidth[i] * d.s[i];
-    const colATop = d.y[i] + d.colHalfHeight[i] * d.s[i];
-    const colABottom = d.y[i] - d.colHalfHeight[i] * d.s[i];
+    const colALeft = d.x[i] - d.colHalfWidth[i] * d.scaleX[i];
+    const colARight = d.x[i] + d.colHalfWidth[i] * d.scaleX[i];
+    const colATop = d.y[i] + d.colHalfHeight[i] * d.scaleY[i];
+    const colABottom = d.y[i] - d.colHalfHeight[i] * d.scaleY[i];
 
     for (let j = i + 1; j < state.baseEntities.len; j++) {
-      const colBLeft = d.x[j] - d.colHalfWidth[j] * d.s[j];
-      const colBRight = d.x[j] + d.colHalfWidth[j] * d.s[j];
-      const colBTop = d.y[j] + d.colHalfHeight[j] * d.s[j];
-      const colBBottom = d.y[j] - d.colHalfHeight[j] * d.s[j];
+      const colBLeft = d.x[j] - d.colHalfWidth[j] * d.scaleX[j];
+      const colBRight = d.x[j] + d.colHalfWidth[j] * d.scaleX[j];
+      const colBTop = d.y[j] + d.colHalfHeight[j] * d.scaleY[j];
+      const colBBottom = d.y[j] - d.colHalfHeight[j] * d.scaleY[j];
 
       if (
         colALeft < colBRight &&
@@ -71,13 +71,12 @@ export function handleCollisions() {
         d.velY[boidBaseId] * d.velY[boidBaseId]
     );
 
-    const astrId = d.typeId[astrBaseId];
+    const astrId = state.baseToType[astrBaseId];
 
     if (speed > 500 && state.asteroids.data.hurtCooldown[astrId] <= 0) {
       d.color[astrBaseId] = state.colors.asteroidHurt;
-      const astrId = d.typeId[astrBaseId];
       state.asteroids.data.health[astrId] -= 20;
-      state.asteroids.data.damageColorTimer[astrId] = 0.2;
+      state.asteroids.data.damageColorTimer[astrId] = 0.15;
       state.asteroids.data.hurtCooldown[astrId] = 0.5;
     }
   }

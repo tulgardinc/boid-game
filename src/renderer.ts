@@ -52,7 +52,7 @@ export type InstanceBufferLayouts = {
 };
 const instanceBufferLayouts: { [k: string]: GPUVertexBufferLayout } = {
   transform2D: {
-    arrayStride: 7 * 4,
+    arrayStride: 8 * 4,
     stepMode: "instance",
     attributes: [
       {
@@ -63,16 +63,16 @@ const instanceBufferLayouts: { [k: string]: GPUVertexBufferLayout } = {
       {
         shaderLocation: 2,
         offset: 2 * 4,
-        format: "float32",
+        format: "float32x2",
       },
       {
         shaderLocation: 3,
-        offset: 3 * 4,
+        offset: 4 * 4,
         format: "float32",
       },
       {
         shaderLocation: 4,
-        offset: 4 * 4,
+        offset: 5 * 4,
         format: "float32x3",
       },
     ],
@@ -81,7 +81,7 @@ const instanceBufferLayouts: { [k: string]: GPUVertexBufferLayout } = {
 
 function initInstanceBuffer(device: GPUDevice) {
   return device.createBuffer({
-    size: 7 * 4 * 1000,
+    size: 8 * 4 * 1000,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
   });
 }
@@ -155,14 +155,15 @@ export function updateTransformColorGPUData(
   device: GPUDevice,
   entityIds: number[]
 ) {
-  const result = new Float32Array(entityIds.length * 7);
+  const result = new Float32Array(entityIds.length * 8);
   const d = state.baseEntities.data;
 
   let i = 0;
   for (const eid of entityIds) {
     result[i++] = d.x[eid];
     result[i++] = d.y[eid];
-    result[i++] = d.s[eid];
+    result[i++] = d.scaleX[eid];
+    result[i++] = d.scaleY[eid];
     result[i++] = (d.r[eid] * Math.PI) / 180;
     const col = d.color[eid];
     result[i++] = col.r;

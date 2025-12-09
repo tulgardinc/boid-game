@@ -1,5 +1,6 @@
+import { createHealthBar } from "./healthbar";
 import { appendSoA } from "./SoA";
-import { EntityType, state } from "./state";
+import { EntityType, scheduleForDelete, state } from "./state";
 
 function randomStep() {
   return Math.random() > 0.5 ? 1 : -1;
@@ -23,14 +24,17 @@ function createAsteroid() {
     spawnY = randomStep() * (1080 / 2 + maxScale);
   }
 
+  const scale = Math.random() * (maxScale - minScale) + minScale;
+
   const baseId = appendSoA(state.baseEntities, {
     type: EntityType.Asteroid,
-    typeId: 0,
 
     x: spawnX,
     y: spawnY,
-    s: Math.random() * (maxScale - minScale) + minScale,
     r: Math.random() * 180,
+
+    scaleX: scale,
+    scaleY: scale,
 
     velX:
       -(Math.abs(spawnX) / spawnX) *
@@ -51,16 +55,20 @@ function createAsteroid() {
   });
 
   const typeId = appendSoA(state.asteroids, {
-    baseEnitityId: baseId,
-    health: 0,
+    health: 100,
     damageColorTimer: null,
     hurtCooldown: 0,
   });
 
-  state.baseEntities.data.typeId[baseId] = typeId;
+  state.baseToType[baseId] = typeId;
+  state.typeToBase[typeId] = baseId;
+
+  createHealthBar({ x: spawnX, y: spawnY }, typeId);
 }
 
 export function asteroidUpdate() {
+  const ad = state.asteroids.data;
+
   state.asteroidTimer += state.time.deltaTime;
   if (state.asteroidTimer >= 1) {
     createAsteroid();
@@ -68,13 +76,17 @@ export function asteroidUpdate() {
   }
 
   for (let i = 0; i < state.asteroids.len; i++) {
-    const ad = state.asteroids.data;
+    if (ad.health[i] <= 0) {
+      scheduleForDelete(state.typeToBase[i], state.asteroids);
+      continue;
+    }
+
     if (ad.damageColorTimer[i]) {
       if (ad.damageColorTimer[i]! > 0) {
         ad.damageColorTimer[i]! -= state.time.deltaTime;
       } else {
         ad.damageColorTimer[i] = null;
-        const bId = ad.baseEnitityId[i];
+        const bId = state.typeToBase[i];
         state.baseEntities.data.color[bId] = state.colors.asteroid;
       }
     }

@@ -1,4 +1,8 @@
-import { initializeState, deltaTimeUpdate } from "./state";
+import {
+  initializeState,
+  deltaTimeUpdate,
+  deleteScheduledEntities,
+} from "./state";
 import "./style.css";
 import { asteroidUpdate } from "./asteroid";
 import { initRenderer, renderer } from "./renderer";
@@ -6,6 +10,7 @@ import { renderBoids } from "./meshes/boid";
 import { renderTexturedQuads } from "./meshes/quad";
 import { updateBoids } from "./boid";
 import { detectCollisions, handleCollisions, physicsUpdate } from "./util";
+import { updateHealthBars } from "./healthbar";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <canvas width="1920" height="1080" id="canvas"></canvas>
@@ -53,7 +58,11 @@ async function main() {
 
     // game logic
     asteroidUpdate();
+    updateHealthBars();
     updateBoids();
+
+    // deletetions
+    deleteScheduledEntities();
 
     // physics
     physicsUpdate();
@@ -65,8 +74,8 @@ async function main() {
     handleCollisions();
 
     // renderer
-    renderTexturedQuads(device);
     renderBoids(device);
+    renderTexturedQuads(device);
 
     (
       renderPassDescriptor.colorAttachments as GPURenderPassColorAttachment[]

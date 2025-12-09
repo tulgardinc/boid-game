@@ -31,3 +31,17 @@ export function appendSoA<T extends object>(
   soa.len += 1;
   return id;
 }
+
+export function swapDelete<T extends object>(
+  idx: number,
+  soa: StructOfArrays<T>
+) {
+  const lastidx = soa.len - 1;
+  if (idx != lastidx) {
+    for (const key of Object.keys(soa.data)) {
+      soa.data[key as keyof typeof soa.data][idx] =
+        soa.data[key as keyof typeof soa.data][lastidx];
+    }
+  }
+  soa.len--;
+}

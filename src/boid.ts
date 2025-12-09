@@ -5,12 +5,13 @@ import { angleDiff } from "./util";
 function createBoid(pos: { x: number; y: number }) {
   const baseId = appendSoA(state.baseEntities, {
     type: EntityType.Boid,
-    typeId: 0,
 
     x: pos.x,
     y: pos.y,
-    s: 25,
     r: 0,
+
+    scaleX: 25,
+    scaleY: 25,
 
     velX: 0,
     velY: 0,
@@ -30,7 +31,8 @@ function createBoid(pos: { x: number; y: number }) {
     baseEnitityId: baseId,
   });
 
-  state.baseEntities.data.typeId[baseId] = typeId;
+  state.baseToType[baseId] = typeId;
+  state.typeToBase[typeId] = baseId;
 }
 
 export function updateBoids() {
@@ -42,11 +44,11 @@ export function updateBoids() {
   const d = state.baseEntities.data;
 
   for (let i = 0; i < state.boids.len; i++) {
-    const eId = state.boids.data.baseEnitityId[i];
+    const baseId = state.typeToBase[i];
 
     const dir = { x: 0, y: 0 };
-    dir.x = target.x - d.x[eId];
-    dir.y = target.y - d.y[eId];
+    dir.x = target.x - d.x[baseId];
+    dir.y = target.y - d.y[baseId];
     const dist = Math.hypot(dir.x, dir.y);
     dir.x /= dist;
     dir.y /= dist;
@@ -56,22 +58,22 @@ export function updateBoids() {
       targetAngle += 360;
     }
 
-    const error = angleDiff(targetAngle, d.r[eId]);
+    const error = angleDiff(targetAngle, d.r[baseId]);
 
     const Kp = 28;
     const Kd = 8;
 
-    d.aclR[eId] = Kp * error - Kd * d.velR[eId];
+    d.aclR[baseId] = Kp * error - Kd * d.velR[baseId];
 
-    const rad = (d.r[eId] * Math.PI) / 180;
+    const rad = (d.r[baseId] * Math.PI) / 180;
     const fwdx = -Math.sin(rad);
     const fwdy = Math.cos(rad);
 
     const sidex = fwdy;
     const sidey = -fwdx;
 
-    const vForward = d.velX[eId] * fwdx + d.velY[eId] * fwdy;
-    const vSide = d.velX[eId] * sidex + d.velY[eId] * sidey;
+    const vForward = d.velX[baseId] * fwdx + d.velY[baseId] * fwdy;
+    const vSide = d.velX[baseId] * sidex + d.velY[baseId] * sidey;
 
     const thrust = 400;
     const axThrust = fwdx * thrust;
@@ -90,8 +92,8 @@ export function updateBoids() {
     const axLong = longForce * fwdx;
     const ayLong = longForce * fwdy;
 
-    d.aclX[eId] = axThrust + axSide + axLong;
-    d.aclY[eId] = ayThrust + aySide + ayLong;
+    d.aclX[baseId] = axThrust + axSide + axLong;
+    d.aclY[baseId] = ayThrust + aySide + ayLong;
   }
 }
 

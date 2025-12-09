@@ -4,7 +4,7 @@ var<uniform> vpMatrix: mat4x4<f32>;
 struct VertexInput {
   @location(0) vpos: vec2<f32>,
   @location(1) pos: vec2<f32>,
-  @location(2) scale: f32,
+  @location(2) scale: vec2<f32>,
   @location(3) rot: f32,
   @location(4) color: vec3<f32>
 };
