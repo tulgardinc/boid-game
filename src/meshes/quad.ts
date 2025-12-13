@@ -56,5 +56,6 @@ export function renderTexturedQuads(device: GPUDevice) {
     instanceCount: quadIds.length,
     firstInstance,
     indexCount: indices.length,
+    kind: "mesh",
   });
 }

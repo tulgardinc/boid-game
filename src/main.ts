@@ -5,7 +5,12 @@ import {
 } from "./state";
 import "./style.css";
 import { asteroidUpdate } from "./asteroid";
-import { initRenderer, renderer } from "./renderer";
+import {
+  emitTrailVertices,
+  initRenderer,
+  renderer,
+  renderTrails,
+} from "./renderer";
 import { renderBoids } from "./meshes/boid";
 import { renderTexturedQuads } from "./meshes/quad";
 import { updateBoids } from "./boid";
@@ -61,6 +66,8 @@ async function main() {
     updateHealthBars();
     updateBoids();
 
+    emitTrailVertices(device);
+
     // deletetions
     deleteScheduledEntities();
 
@@ -74,6 +81,7 @@ async function main() {
     handleCollisions();
 
     // renderer
+    renderTrails();
     renderBoids(device);
     renderTexturedQuads(device);
 
@@ -87,18 +95,31 @@ async function main() {
     );
 
     for (const command of renderer.renderQueue) {
-      pass.setPipeline(renderer.piplines[command.pipeline]);
-      pass.setBindGroup(0, renderer.bindGroups[command.bindGroup].group);
-      pass.setVertexBuffer(0, renderer.meshes[command.mesh].vertexBuffer);
-      pass.setIndexBuffer(renderer.meshes[command.mesh].indexBuffer, "uint16");
-      pass.setVertexBuffer(1, renderer.instanceBuffer);
-      pass.drawIndexed(
-        command.indexCount,
-        command.instanceCount,
-        0,
-        0,
-        command.firstInstance
-      );
+      switch (command.kind) {
+        case "mesh":
+          pass.setPipeline(renderer.piplines[command.pipeline]);
+          pass.setBindGroup(0, renderer.bindGroups[command.bindGroup].group);
+          pass.setVertexBuffer(0, renderer.meshes[command.mesh].vertexBuffer);
+          pass.setIndexBuffer(
+            renderer.meshes[command.mesh].indexBuffer,
+            "uint16"
+          );
+          pass.setVertexBuffer(1, renderer.instanceBuffer);
+          pass.drawIndexed(
+            command.indexCount,
+            command.instanceCount,
+            0,
+            0,
+            command.firstInstance
+          );
+          break;
+        case "vfx":
+          pass.setPipeline(renderer.piplines[command.pipeline]);
+          pass.setBindGroup(0, renderer.bindGroups[command.bindGroup].group);
+          pass.setVertexBuffer(0, renderer.dynamicVertBuffer);
+          pass.draw(command.vertexCount, 1, command.firstVertex, 0);
+          break;
+      }
     }
 
     pass.end();

@@ -3,7 +3,7 @@ import { addBaseEntity, EntityType, state } from "./state";
 import { angleDiff } from "./util";
 
 function createBoid(pos: { x: number; y: number }) {
-  const { baseId } = addBaseEntity({
+  const { baseId, entityId } = addBaseEntity({
     type: EntityType.Boid,
 
     x: pos.x,
@@ -33,6 +33,13 @@ function createBoid(pos: { x: number; y: number }) {
   });
 
   state.baseEntities.data.typeId[baseId] = typeId;
+
+  const trailIndx = appendSoA(state.trails, {
+    length: 0,
+    ownerId: entityId,
+  });
+
+  state.idToTrailLookup[trailIndx];
 }
 
 export function updateBoids() {
@@ -45,6 +52,8 @@ export function updateBoids() {
 
   for (let i = 0; i < state.boids.len; i++) {
     const baseId = state.boids.data.baseId[i];
+
+    // handle movement
 
     const dir = { x: 0, y: 0 };
     dir.x = target.x - d.x[baseId];
@@ -94,6 +103,8 @@ export function updateBoids() {
 
     d.aclX[baseId] = axThrust + axSide + axLong;
     d.aclY[baseId] = ayThrust + aySide + ayLong;
+
+    // handle trail
   }
 }
 

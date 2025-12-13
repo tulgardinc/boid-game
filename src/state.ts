@@ -8,6 +8,16 @@ export type Collision = {
   entityBId: number;
 };
 
+export type TrailPointArray = {
+  length: number;
+  ownerId: number;
+};
+
+export type TrailPoint = {
+  x: number;
+  y: number;
+};
+
 export enum EntityType {
   Asteroid,
   Boid,
@@ -67,6 +77,15 @@ export const state = {
   currentId: 0,
   freedIds: Array<number>(),
   idToBaseLookup: Array<number>(),
+  idToTrailLookup: Array<number>(),
+  trailPoints: makeSoA<TrailPoint>(100, {
+    x: 0,
+    y: 0,
+  }),
+  trails: makeSoA<TrailPointArray>(100, {
+    length: 0,
+    ownerId: 0,
+  }),
   baseEntities: makeSoA<BaseEntity>(100, {
     type: EntityType.Asteroid,
     x: 0,
@@ -127,6 +146,44 @@ export const state = {
     y: 0,
   },
 };
+
+export const MAX_TP_POS_LENGTH = 10;
+
+export function getTrailHead(trailIndex: number) {
+  return trailIndex * MAX_TP_POS_LENGTH;
+}
+
+export function swapDeleteTrailPoint(ownerId: number) {
+  const finalTrailIndex = state.trails.len - 1;
+  const finalTrailOwner = state.trails.data.ownerId[finalTrailIndex];
+
+  const trailToDeleteIndx = state.idToTrailLookup[ownerId];
+  const trailToDeleteHead = getTrailHead(trailToDeleteIndx);
+
+  const finalTrailHead = getTrailHead(finalTrailIndex);
+
+  for (let i = 0; i < MAX_TP_POS_LENGTH; i++) {
+    state.trailPoints.data.x[trailToDeleteHead + i] =
+      state.trailPoints.data.x[finalTrailHead + i];
+    state.trailPoints.data.y[trailToDeleteHead + i] =
+      state.trailPoints.data.y[finalTrailHead + i];
+  }
+
+  swapDelete(trailToDeleteIndx, state.trails);
+  state.trailPoints.len -= MAX_TP_POS_LENGTH;
+
+  if (finalTrailOwner != ownerId)
+    state.idToTrailLookup[finalTrailOwner] = trailToDeleteIndx;
+}
+
+export function addTrailPoint(trailIndex: number, x: number, y: number) {
+  const trailHead = getTrailHead(trailIndex);
+  const trailLength = state.trails.data.length[trailIndex];
+
+  state.trailPoints.data.x[trailHead + trailLength] = x;
+  state.trailPoints.data.y[trailHead + trailLength] = y;
+  state.trails.data.length[trailIndex]++;
+}
 
 export function addBaseEntity(baseEntity: Omit<BaseEntity, "entityId">) {
   let baseId = 0;
@@ -193,9 +250,9 @@ function destroyEntity(entityIdToDelete: number) {
   swapDelete(typeIdToDelete, typeTableForEntityToDelete);
 
   if (typeIdToDelete != typeLast) {
-    const updatedBaseIdOfLastType =
+    const baseIdOfLastType =
       typeTableForEntityToDelete.data.baseId[typeIdToDelete];
-    state.baseEntities.data.typeId[updatedBaseIdOfLastType] = typeIdToDelete;
+    state.baseEntities.data.typeId[baseIdOfLastType] = typeIdToDelete;
   }
 }
 
@@ -206,6 +263,11 @@ export function scheduleForDelete(entityId: number) {
 export function deleteScheduledEntities() {
   for (const id of state.deleteSchedule) {
     destroyEntity(id);
+    if (
+      state.baseEntities.data.type[state.idToBaseLookup[id]] == EntityType.Boid
+    ) {
+      swapDeleteTrailPoint(id);
+    }
     state.freedIds.push(id);
   }
   state.deleteSchedule.length = 0;

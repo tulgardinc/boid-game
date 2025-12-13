@@ -1,16 +1,19 @@
-import transform2DColor from "./shaders/coloredTransform.wgsl?raw";
+import transform2DColorCode from "./shaders/coloredTransform.wgsl?raw";
+import trailCode from "./shaders/trail.wgsl?raw";
 import { getBoidIndexBufer, getBoidVertexBuffer } from "./meshes/boid";
 import { getQuadVertexBuffer, getQuadIndexBuffer } from "./meshes/quad";
-import { get2DTransformPipeline } from "./pipelines";
-import { state } from "./state";
+import { get2DTransformPipeline, getTrailPipeline } from "./pipelines";
+import { getTrailHead, state } from "./state";
 import { getCameraBindGroup, getCameraBindGroupLayout } from "./uniforms";
 
 export type Renderer = {
   instanceCount: number;
   instanceOffset: number;
+  dynamicVertBuffer: GPUBuffer;
   instanceBuffer: GPUBuffer;
   shaders: {
-    pos2DRed: GPUShaderModule;
+    coloredTransform: GPUShaderModule;
+    trail: GPUShaderModule;
   };
   meshes: {
     quad: Mesh;
@@ -18,6 +21,7 @@ export type Renderer = {
   };
   piplines: {
     transform2D: GPURenderPipeline;
+    trail: GPURenderPipeline;
   };
   bindGroups: {
     camera: {
@@ -25,7 +29,7 @@ export type Renderer = {
       group: GPUBindGroup;
     };
   };
-  renderQueue: RenderCommand[];
+  renderQueue: (RenderCommandMesh | RenderCommandVFX)[];
 };
 
 export let renderer!: Renderer;
@@ -42,6 +46,22 @@ const vertexBufferLayouts: { [k: string]: GPUVertexBufferLayout } = {
         shaderLocation: 0,
         offset: 0,
         format: "float32x2",
+      },
+    ],
+  },
+  pos2DColor: {
+    arrayStride: 5 * 4,
+    stepMode: "vertex",
+    attributes: [
+      {
+        shaderLocation: 0,
+        offset: 0,
+        format: "float32x2",
+      },
+      {
+        shaderLocation: 0,
+        offset: 2 * 4,
+        format: "float32x3",
       },
     ],
   },
@@ -86,6 +106,13 @@ function initInstanceBuffer(device: GPUDevice) {
   });
 }
 
+function initVertexBuffer(device: GPUDevice) {
+  return device.createBuffer({
+    size: 5 * 4 * 1000,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+  });
+}
+
 export type Mesh = {
   vertexBuffer: GPUBuffer;
   indexBuffer: GPUBuffer;
@@ -105,12 +132,14 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
   };
 
   const shaders: Renderer["shaders"] = {
-    pos2DRed: getShaderPos2DRed(device),
+    coloredTransform: getShaderPos2DRed(device),
+    trail: getShaderTrail(device),
   };
 
   renderer = {
     instanceCount: 0,
     instanceOffset: 0,
+    dynamicVertBuffer: initVertexBuffer(device),
     instanceBuffer: initInstanceBuffer(device),
     meshes: {
       quad: {
@@ -135,6 +164,13 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
         vertexBufferLayouts,
         instanceBufferLayouts
       ),
+      trail: getTrailPipeline(
+        device,
+        format,
+        bindGroups,
+        shaders,
+        vertexBufferLayouts
+      ),
     },
     bindGroups,
     shaders,
@@ -142,13 +178,22 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
   };
 }
 
-export type RenderCommand = {
+export type RenderCommandMesh = {
+  kind: "mesh";
   pipeline: keyof Renderer["piplines"];
   mesh: keyof Renderer["meshes"];
   bindGroup: keyof Renderer["bindGroups"];
   instanceCount: number;
   firstInstance: number;
   indexCount: number;
+};
+
+export type RenderCommandVFX = {
+  kind: "vfx";
+  pipeline: keyof Renderer["piplines"];
+  bindGroup: keyof Renderer["bindGroups"];
+  vertexCount: number;
+  firstVertex: number;
 };
 
 export function updateTransformColorGPUData(
@@ -189,6 +234,70 @@ export function updateTransformColorGPUData(
 function getShaderPos2DRed(device: GPUDevice) {
   return device.createShaderModule({
     label: "draw colored objects in 2D",
-    code: transform2DColor,
+    code: transform2DColorCode,
+  });
+}
+
+function getShaderTrail(device: GPUDevice) {
+  return device.createShaderModule({
+    label: "draw colored objects in 2D",
+    code: trailCode,
+  });
+}
+
+export function emitTrailVertices(device: GPUDevice) {
+  const WIDTH = 8;
+
+  const tpCount = state.trails.data.length.reduce((prev, cur) => prev + cur, 0);
+
+  const vertices = new Float32Array(tpCount * 5 * 2);
+  let vertexIndex = 0;
+
+  for (let i = 0; i < state.trails.len - 1; i++) {
+    const trailLen = state.trails.data.length[i];
+    const head = getTrailHead(i);
+
+    for (let j = head; j < head + trailLen - 1; j++) {
+      const px = state.trailPoints.data.x[j];
+      const py = state.trailPoints.data.y[j];
+      const pnx = state.trailPoints.data.x[j + 1];
+      const pny = state.trailPoints.data.y[j + 1];
+
+      const dirX = pnx - px;
+      const dirY = pny - py;
+      const leftX = -dirY;
+      const leftY = dirX;
+      const rightX = dirY;
+      const rightY = -dirX;
+
+      const pLeftX = px + (leftX * WIDTH) / 2;
+      const pLeftY = py + (leftY * WIDTH) / 2;
+      const pRightX = px + (rightX * WIDTH) / 2;
+      const pRightY = py + (rightY * WIDTH) / 2;
+
+      vertices[vertexIndex++] = pLeftX;
+      vertices[vertexIndex++] = pLeftY;
+      vertices[vertexIndex++] = 0;
+      vertices[vertexIndex++] = 0;
+      vertices[vertexIndex++] = 0;
+
+      vertices[vertexIndex++] = pRightX;
+      vertices[vertexIndex++] = pRightY;
+      vertices[vertexIndex++] = 0;
+      vertices[vertexIndex++] = 0;
+      vertices[vertexIndex++] = 0;
+    }
+  }
+
+  device.queue.writeBuffer(renderer.dynamicVertBuffer, 0, vertices);
+}
+
+export function renderTrails() {
+  renderer.renderQueue.push({
+    pipeline: "trail",
+    bindGroup: "camera",
+    kind: "vfx",
+    vertexCount: state.trails.data.length.reduce((prev, cur) => prev + cur, 0),
+    firstVertex: 0,
   });
 }

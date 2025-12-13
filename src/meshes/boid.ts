@@ -50,5 +50,6 @@ export function renderBoids(device: GPUDevice) {
     instanceCount: state.boids.len,
     firstInstance,
     indexCount: indices.length,
+    kind: "mesh",
   });
 }
