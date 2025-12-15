@@ -11,6 +11,8 @@ export type Collision = {
 export type TrailPointArray = {
   length: number;
   ownerId: number;
+  head: number;
+  tail: number;
 };
 
 export type TrailPoint = {
@@ -85,6 +87,8 @@ export const state = {
   trails: makeSoA<TrailPointArray>(100, {
     length: 0,
     ownerId: 0,
+    head: 0,
+    tail: 0,
   }),
   baseEntities: makeSoA<BaseEntity>(100, {
     type: EntityType.Asteroid,
@@ -147,42 +151,63 @@ export const state = {
   },
 };
 
-export const MAX_TP_POS_LENGTH = 10;
+export const MAX_TRAIL_LENGTH = 50;
 
-export function getTrailHead(trailIndex: number) {
-  return trailIndex * MAX_TP_POS_LENGTH;
-}
-
-export function swapDeleteTrailPoint(ownerId: number) {
+export function swapDeleteTrail(ownerId: number) {
   const finalTrailIndex = state.trails.len - 1;
   const finalTrailOwner = state.trails.data.ownerId[finalTrailIndex];
 
   const trailToDeleteIndx = state.idToTrailLookup[ownerId];
-  const trailToDeleteHead = getTrailHead(trailToDeleteIndx);
+  const trailToDeleteOffset = trailToDeleteIndx * MAX_TRAIL_LENGTH;
 
-  const finalTrailHead = getTrailHead(finalTrailIndex);
+  const finalTrailOffset = finalTrailIndex * MAX_TRAIL_LENGTH;
 
-  for (let i = 0; i < MAX_TP_POS_LENGTH; i++) {
-    state.trailPoints.data.x[trailToDeleteHead + i] =
-      state.trailPoints.data.x[finalTrailHead + i];
-    state.trailPoints.data.y[trailToDeleteHead + i] =
-      state.trailPoints.data.y[finalTrailHead + i];
+  for (let i = 0; i < MAX_TRAIL_LENGTH; i++) {
+    state.trailPoints.data.x[trailToDeleteOffset + i] =
+      state.trailPoints.data.x[finalTrailOffset + i];
+    state.trailPoints.data.y[trailToDeleteOffset + i] =
+      state.trailPoints.data.y[finalTrailOffset + i];
   }
 
   swapDelete(trailToDeleteIndx, state.trails);
-  state.trailPoints.len -= MAX_TP_POS_LENGTH;
+  state.trailPoints.len -= MAX_TRAIL_LENGTH;
 
   if (finalTrailOwner != ownerId)
     state.idToTrailLookup[finalTrailOwner] = trailToDeleteIndx;
 }
 
-export function addTrailPoint(trailIndex: number, x: number, y: number) {
-  const trailHead = getTrailHead(trailIndex);
-  const trailLength = state.trails.data.length[trailIndex];
+export function createNewTrail(entityId: number) {
+  const trailIndx = appendSoA(state.trails, {
+    length: 0,
+    ownerId: entityId,
+    head: 0,
+    tail: MAX_TRAIL_LENGTH - 1,
+  });
 
-  state.trailPoints.data.x[trailHead + trailLength] = x;
-  state.trailPoints.data.y[trailHead + trailLength] = y;
-  state.trails.data.length[trailIndex]++;
+  state.idToTrailLookup[entityId] = trailIndx;
+}
+
+export function getAbsoluteTPIndex(trailIndex: number, pointIndex: number) {
+  return (
+    trailIndex * MAX_TRAIL_LENGTH +
+    ((state.trails.data.head[trailIndex] + pointIndex) % MAX_TRAIL_LENGTH)
+  );
+}
+
+export function addTrailPoint(trailIndex: number, x: number, y: number) {
+  const trailLength = state.trails.data.length[trailIndex];
+  if (trailLength == MAX_TRAIL_LENGTH) {
+    state.trails.data.head[trailIndex] =
+      (state.trails.data.head[trailIndex] + 1) % MAX_TRAIL_LENGTH;
+  } else {
+    state.trails.data.length[trailIndex]++;
+  }
+
+  const tail = (state.trails.data.tail[trailIndex] + 1) % MAX_TRAIL_LENGTH;
+  state.trails.data.tail[trailIndex] = tail;
+
+  state.trailPoints.data.x[trailIndex * MAX_TRAIL_LENGTH + tail] = x;
+  state.trailPoints.data.y[trailIndex * MAX_TRAIL_LENGTH + tail] = y;
 }
 
 export function addBaseEntity(baseEntity: Omit<BaseEntity, "entityId">) {
@@ -266,7 +291,7 @@ export function deleteScheduledEntities() {
     if (
       state.baseEntities.data.type[state.idToBaseLookup[id]] == EntityType.Boid
     ) {
-      swapDeleteTrailPoint(id);
+      swapDeleteTrail(id);
     }
     state.freedIds.push(id);
   }

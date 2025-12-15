@@ -3,8 +3,9 @@ import trailCode from "./shaders/trail.wgsl?raw";
 import { getBoidIndexBufer, getBoidVertexBuffer } from "./meshes/boid";
 import { getQuadVertexBuffer, getQuadIndexBuffer } from "./meshes/quad";
 import { get2DTransformPipeline, getTrailPipeline } from "./pipelines";
-import { getTrailHead, state } from "./state";
+import { getAbsoluteTPIndex, MAX_TRAIL_LENGTH, state } from "./state";
 import { getCameraBindGroup, getCameraBindGroupLayout } from "./uniforms";
+import { dir } from "console";
 
 export type Renderer = {
   instanceCount: number;
@@ -50,7 +51,7 @@ const vertexBufferLayouts: { [k: string]: GPUVertexBufferLayout } = {
     ],
   },
   pos2DColor: {
-    arrayStride: 5 * 4,
+    arrayStride: 6 * 4,
     stepMode: "vertex",
     attributes: [
       {
@@ -59,9 +60,9 @@ const vertexBufferLayouts: { [k: string]: GPUVertexBufferLayout } = {
         format: "float32x2",
       },
       {
-        shaderLocation: 0,
+        shaderLocation: 1,
         offset: 2 * 4,
-        format: "float32x3",
+        format: "float32x4",
       },
     ],
   },
@@ -246,29 +247,39 @@ function getShaderTrail(device: GPUDevice) {
 }
 
 export function emitTrailVertices(device: GPUDevice) {
-  const WIDTH = 8;
+  const WIDTH = 6;
 
-  const tpCount = state.trails.data.length.reduce((prev, cur) => prev + cur, 0);
+  const segementCount = state.trails.data.length.reduce(
+    (prev, cur) => (cur > 2 ? prev + cur - 1 : prev),
+    0
+  );
+  if (segementCount == 0) return;
 
-  const vertices = new Float32Array(tpCount * 5 * 2);
+  const vertices = new Float32Array(segementCount * 6 * 2);
   let vertexIndex = 0;
 
-  for (let i = 0; i < state.trails.len - 1; i++) {
+  for (let i = 0; i < state.trails.len; i++) {
     const trailLen = state.trails.data.length[i];
-    const head = getTrailHead(i);
+    const head = state.trails.data.head[i];
 
     for (let j = head; j < head + trailLen - 1; j++) {
-      const px = state.trailPoints.data.x[j];
-      const py = state.trailPoints.data.y[j];
-      const pnx = state.trailPoints.data.x[j + 1];
-      const pny = state.trailPoints.data.y[j + 1];
+      const tpIndex = i * MAX_TRAIL_LENGTH + (j % MAX_TRAIL_LENGTH);
+      const tpIndexNext = i * MAX_TRAIL_LENGTH + ((j + 1) % MAX_TRAIL_LENGTH);
+      const px = state.trailPoints.data.x[tpIndex];
+      const py = state.trailPoints.data.y[tpIndex];
+      const pnx = state.trailPoints.data.x[tpIndexNext];
+      const pny = state.trailPoints.data.y[tpIndexNext];
 
       const dirX = pnx - px;
       const dirY = pny - py;
-      const leftX = -dirY;
-      const leftY = dirX;
-      const rightX = dirY;
-      const rightY = -dirX;
+      const len = Math.hypot(dirX, dirY);
+      const dirNormX = dirX / len;
+      const dirNormY = dirY / len;
+
+      const leftX = -dirNormY;
+      const leftY = dirNormX;
+      const rightX = dirNormY;
+      const rightY = -dirNormX;
 
       const pLeftX = px + (leftX * WIDTH) / 2;
       const pLeftY = py + (leftY * WIDTH) / 2;
@@ -277,15 +288,17 @@ export function emitTrailVertices(device: GPUDevice) {
 
       vertices[vertexIndex++] = pLeftX;
       vertices[vertexIndex++] = pLeftY;
-      vertices[vertexIndex++] = 0;
-      vertices[vertexIndex++] = 0;
-      vertices[vertexIndex++] = 0;
+      vertices[vertexIndex++] = 1;
+      vertices[vertexIndex++] = 1;
+      vertices[vertexIndex++] = 1;
+      vertices[vertexIndex++] = ((j - head) / trailLen) * 0.8;
 
       vertices[vertexIndex++] = pRightX;
       vertices[vertexIndex++] = pRightY;
-      vertices[vertexIndex++] = 0;
-      vertices[vertexIndex++] = 0;
-      vertices[vertexIndex++] = 0;
+      vertices[vertexIndex++] = 1;
+      vertices[vertexIndex++] = 1;
+      vertices[vertexIndex++] = 1;
+      vertices[vertexIndex++] = ((j - head + 1) / trailLen) * 0.8;
     }
   }
 
@@ -297,7 +310,11 @@ export function renderTrails() {
     pipeline: "trail",
     bindGroup: "camera",
     kind: "vfx",
-    vertexCount: state.trails.data.length.reduce((prev, cur) => prev + cur, 0),
+    vertexCount:
+      state.trails.data.length.reduce(
+        (prev, cur) => (cur > 2 ? prev + cur - 1 : prev),
+        0
+      ) * 2,
     firstVertex: 0,
   });
 }

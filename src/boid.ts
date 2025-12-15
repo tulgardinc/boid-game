@@ -1,5 +1,12 @@
 import { appendSoA } from "./SoA";
-import { addBaseEntity, EntityType, state } from "./state";
+import {
+  addBaseEntity,
+  addTrailPoint,
+  createNewTrail,
+  EntityType,
+  MAX_TRAIL_LENGTH,
+  state,
+} from "./state";
 import { angleDiff } from "./util";
 
 function createBoid(pos: { x: number; y: number }) {
@@ -34,12 +41,7 @@ function createBoid(pos: { x: number; y: number }) {
 
   state.baseEntities.data.typeId[baseId] = typeId;
 
-  const trailIndx = appendSoA(state.trails, {
-    length: 0,
-    ownerId: entityId,
-  });
-
-  state.idToTrailLookup[trailIndx];
+  createNewTrail(entityId);
 }
 
 export function updateBoids() {
@@ -103,8 +105,40 @@ export function updateBoids() {
 
     d.aclX[baseId] = axThrust + axSide + axLong;
     d.aclY[baseId] = ayThrust + aySide + ayLong;
+  }
+}
 
-    // handle trail
+export function updateBoidTrails() {
+  const d = state.baseEntities.data;
+
+  const MAX_DISTANCE = 4;
+
+  for (let i = 0; i < state.boids.len; i++) {
+    const baseId = state.boids.data.baseId[i];
+    const eId = d.entityId[baseId];
+    const trailIndex = state.idToTrailLookup[eId];
+    const tailIndex = state.trails.data.tail[trailIndex];
+
+    const rad = (d.r[baseId] * Math.PI) / 180;
+    const fwdx = -Math.sin(rad);
+    const fwdy = Math.cos(rad);
+    const fwdLen = Math.hypot(fwdx, fwdy);
+    const fwdxN = fwdx / fwdLen;
+    const fwdyN = fwdy / fwdLen;
+
+    const x = d.x[baseId] - fwdxN * 20;
+    const y = d.y[baseId] - fwdyN * 20;
+    const absoluteTI = trailIndex * MAX_TRAIL_LENGTH + tailIndex;
+    const tailX = state.trailPoints.data.x[absoluteTI];
+    const tailY = state.trailPoints.data.y[absoluteTI];
+    const distX = x - tailX;
+    const distY = y - tailY;
+
+    const dist = Math.hypot(distX, distY);
+
+    if (dist >= MAX_DISTANCE) {
+      addTrailPoint(trailIndex, x, y);
+    }
   }
 }
 

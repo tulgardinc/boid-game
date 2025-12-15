@@ -13,7 +13,7 @@ import {
 } from "./renderer";
 import { renderBoids } from "./meshes/boid";
 import { renderTexturedQuads } from "./meshes/quad";
-import { updateBoids } from "./boid";
+import { updateBoids, updateBoidTrails } from "./boid";
 import { detectCollisions, handleCollisions, physicsUpdate } from "./util";
 import { updateHealthBars } from "./healthbar";
 
@@ -66,13 +66,15 @@ async function main() {
     updateHealthBars();
     updateBoids();
 
-    emitTrailVertices(device);
-
     // deletetions
     deleteScheduledEntities();
 
     // physics
     physicsUpdate();
+
+    // trail update
+    updateBoidTrails();
+    emitTrailVertices(device);
 
     // collision check
     detectCollisions();

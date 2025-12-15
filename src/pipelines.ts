@@ -51,8 +51,24 @@ export function getTrailPipeline(
     fragment: {
       entryPoint: "fs",
       module: shaders.trail,
-      targets: [{ format }],
+      targets: [
+        {
+          format,
+          blend: {
+            color: {
+              srcFactor: "src-alpha",
+              dstFactor: "one-minus-src-alpha",
+              operation: "add",
+            },
+            alpha: {
+              srcFactor: "one",
+              dstFactor: "one-minus-src-alpha",
+              operation: "add",
+            },
+          },
+        },
+      ],
     },
-    primitive: { topology: "triangle-list" },
+    primitive: { topology: "triangle-strip" },
   });
 }
