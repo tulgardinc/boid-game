@@ -111,7 +111,7 @@ export function updateBoids() {
 export function updateBoidTrails() {
   const d = state.baseEntities.data;
 
-  const MAX_DISTANCE = 4;
+  const MAX_DISTANCE = 1;
 
   for (let i = 0; i < state.boids.len; i++) {
     const baseId = state.boids.data.baseId[i];
@@ -126,8 +126,8 @@ export function updateBoidTrails() {
     const fwdxN = fwdx / fwdLen;
     const fwdyN = fwdy / fwdLen;
 
-    const x = d.x[baseId] - fwdxN * 20;
-    const y = d.y[baseId] - fwdyN * 20;
+    const x = d.x[baseId] - fwdxN * 8;
+    const y = d.y[baseId] - fwdyN * 8;
     const absoluteTI = trailIndex * MAX_TRAIL_LENGTH + tailIndex;
     const tailX = state.trailPoints.data.x[absoluteTI];
     const tailY = state.trailPoints.data.y[absoluteTI];
@@ -136,7 +136,10 @@ export function updateBoidTrails() {
 
     const dist = Math.hypot(distX, distY);
 
-    if (dist >= MAX_DISTANCE) {
+    const speed = Math.hypot(d.velX[baseId], d.velY[baseId]);
+    const adaptiveDistance = MAX_DISTANCE * (1 + speed / 500);
+
+    if (dist >= adaptiveDistance) {
       addTrailPoint(trailIndex, x, y);
     }
   }

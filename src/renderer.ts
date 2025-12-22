@@ -262,13 +262,23 @@ export function emitTrailVertices(device: GPUDevice) {
     const trailLen = state.trails.data.length[i];
     const head = state.trails.data.head[i];
 
-    for (let j = head; j < head + trailLen - 1; j++) {
+    for (let j = head; j < head + trailLen; j++) {
       const tpIndex = i * MAX_TRAIL_LENGTH + (j % MAX_TRAIL_LENGTH);
-      const tpIndexNext = i * MAX_TRAIL_LENGTH + ((j + 1) % MAX_TRAIL_LENGTH);
       const px = state.trailPoints.data.x[tpIndex];
       const py = state.trailPoints.data.y[tpIndex];
-      const pnx = state.trailPoints.data.x[tpIndexNext];
-      const pny = state.trailPoints.data.y[tpIndexNext];
+      let pnx: number;
+      let pny: number;
+
+      if (j < head + trailLen - 1) {
+        const tpIndexNext = i * MAX_TRAIL_LENGTH + ((j + 1) % MAX_TRAIL_LENGTH);
+        pnx = state.trailPoints.data.x[tpIndexNext];
+        pny = state.trailPoints.data.y[tpIndexNext];
+      } else {
+        const oId = state.trails.data.ownerId[i];
+        const baseId = state.idToBaseLookup[oId];
+        pnx = state.baseEntities.data.x[baseId];
+        pny = state.baseEntities.data.y[baseId];
+      }
 
       const dirX = pnx - px;
       const dirY = pny - py;
@@ -286,12 +296,12 @@ export function emitTrailVertices(device: GPUDevice) {
       const pRightX = px + (rightX * WIDTH) / 2;
       const pRightY = py + (rightY * WIDTH) / 2;
 
-      vertices[vertexIndex++] = pLeftX;
-      vertices[vertexIndex++] = pLeftY;
-      vertices[vertexIndex++] = 1;
-      vertices[vertexIndex++] = 1;
-      vertices[vertexIndex++] = 1;
-      vertices[vertexIndex++] = ((j - head) / trailLen) * 0.8;
+      vertices[vertexIndex++] = pLeftX; // x
+      vertices[vertexIndex++] = pLeftY; // y
+      vertices[vertexIndex++] = 1; // r
+      vertices[vertexIndex++] = 1; // g
+      vertices[vertexIndex++] = 1; // b
+      vertices[vertexIndex++] = ((j - head) / trailLen) * 0.8; // a
 
       vertices[vertexIndex++] = pRightX;
       vertices[vertexIndex++] = pRightY;
