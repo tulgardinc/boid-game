@@ -119,7 +119,8 @@ async function main() {
           pass.setPipeline(renderer.piplines[command.pipeline]);
           pass.setBindGroup(0, renderer.bindGroups[command.bindGroup].group);
           pass.setVertexBuffer(0, renderer.dynamicVertBuffer);
-          pass.draw(command.vertexCount, 1, command.firstVertex, 0);
+          pass.setIndexBuffer(renderer.dynamicIndexBuffer, "uint16");
+          pass.drawIndexed(command.indexCount, 1, 0, 0);
           break;
       }
     }

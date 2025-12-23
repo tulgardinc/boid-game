@@ -11,6 +11,7 @@ export type Renderer = {
   instanceCount: number;
   instanceOffset: number;
   dynamicVertBuffer: GPUBuffer;
+  dynamicIndexBuffer: GPUBuffer;
   instanceBuffer: GPUBuffer;
   shaders: {
     coloredTransform: GPUShaderModule;
@@ -107,10 +108,19 @@ function initInstanceBuffer(device: GPUDevice) {
   });
 }
 
-function initVertexBuffer(device: GPUDevice) {
+function initDynVertexBuffer(device: GPUDevice) {
+  // float32
   return device.createBuffer({
-    size: 5 * 4 * 1000,
+    size: 6 * 4 * 2 * MAX_TRAIL_LENGTH * 300,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+  });
+}
+
+function initDynIndexBuffer(device: GPUDevice) {
+  // uint16
+  return device.createBuffer({
+    size: 2 * 2 * MAX_TRAIL_LENGTH * 300,
+    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
   });
 }
 
@@ -140,7 +150,8 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
   renderer = {
     instanceCount: 0,
     instanceOffset: 0,
-    dynamicVertBuffer: initVertexBuffer(device),
+    dynamicVertBuffer: initDynVertexBuffer(device),
+    dynamicIndexBuffer: initDynIndexBuffer(device),
     instanceBuffer: initInstanceBuffer(device),
     meshes: {
       quad: {
@@ -193,8 +204,8 @@ export type RenderCommandVFX = {
   kind: "vfx";
   pipeline: keyof Renderer["piplines"];
   bindGroup: keyof Renderer["bindGroups"];
-  vertexCount: number;
-  firstVertex: number;
+  indexCount: number;
+  firstIndex: number;
 };
 
 export function updateTransformColorGPUData(
@@ -249,14 +260,19 @@ function getShaderTrail(device: GPUDevice) {
 export function emitTrailVertices(device: GPUDevice) {
   const WIDTH = 6;
 
-  const segementCount = state.trails.data.length.reduce(
-    (prev, cur) => (cur > 2 ? prev + cur - 1 : prev),
+  const vertexCount = state.trails.data.length.reduce(
+    (prev, cur) => prev + cur,
     0
   );
-  if (segementCount == 0) return;
+  if (vertexCount == 0) return;
 
-  const vertices = new Float32Array(segementCount * 6 * 2);
+  const vertices = new Float32Array(vertexCount * 6 * 2);
+  const indices = new Uint16Array(
+    Math.ceil((vertexCount * 2 + state.trails.len - 1) / 2) * 2
+  );
   let vertexIndex = 0;
+  let indicesIndex = 0;
+  let currentVertex = 0;
 
   for (let i = 0; i < state.trails.len; i++) {
     const trailLen = state.trails.data.length[i];
@@ -302,6 +318,7 @@ export function emitTrailVertices(device: GPUDevice) {
       vertices[vertexIndex++] = 1; // g
       vertices[vertexIndex++] = 1; // b
       vertices[vertexIndex++] = ((j - head) / trailLen) * 0.8; // a
+      indices[indicesIndex++] = currentVertex;
 
       vertices[vertexIndex++] = pRightX;
       vertices[vertexIndex++] = pRightY;
@@ -309,10 +326,18 @@ export function emitTrailVertices(device: GPUDevice) {
       vertices[vertexIndex++] = 1;
       vertices[vertexIndex++] = 1;
       vertices[vertexIndex++] = ((j - head + 1) / trailLen) * 0.8;
+      indices[indicesIndex++] = currentVertex + 1;
+
+      currentVertex += 2;
+    }
+
+    if (i < state.trails.len - 1) {
+      indices[indicesIndex++] = 0xffff; // Restart index
     }
   }
 
   device.queue.writeBuffer(renderer.dynamicVertBuffer, 0, vertices);
+  device.queue.writeBuffer(renderer.dynamicIndexBuffer, 0, indices);
 }
 
 export function renderTrails() {
@@ -320,11 +345,10 @@ export function renderTrails() {
     pipeline: "trail",
     bindGroup: "camera",
     kind: "vfx",
-    vertexCount:
-      state.trails.data.length.reduce(
-        (prev, cur) => (cur > 2 ? prev + cur - 1 : prev),
-        0
-      ) * 2,
-    firstVertex: 0,
+    firstIndex: 0,
+    indexCount:
+      state.trails.data.length.reduce((prev, cur) => prev + cur, 0) * 2 +
+      state.trails.len -
+      1,
   });
 }

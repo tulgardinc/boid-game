@@ -75,6 +75,8 @@ export type InnerHealthBar = {
   outerEntityId: number;
 };
 
+export const MAX_TRAIL_LENGTH = 50;
+
 export const state = {
   currentId: 0,
   freedIds: Array<number>(),
@@ -84,7 +86,7 @@ export const state = {
     x: 0,
     y: 0,
   }),
-  trails: makeSoA<TrailPointArray>(100, {
+  trails: makeSoA<TrailPointArray>(MAX_TRAIL_LENGTH * 300, {
     length: 0,
     ownerId: 0,
     head: 0,
@@ -150,8 +152,6 @@ export const state = {
     y: 0,
   },
 };
-
-export const MAX_TRAIL_LENGTH = 50;
 
 export function swapDeleteTrail(ownerId: number) {
   const finalTrailIndex = state.trails.len - 1;

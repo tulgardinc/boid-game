@@ -72,7 +72,7 @@ export function asteroidUpdate() {
 
   state.asteroidTimer += state.time.deltaTime;
   if (state.asteroidTimer >= 1) {
-    //createAsteroid();
+    createAsteroid();
     state.asteroidTimer = 0;
   }
 

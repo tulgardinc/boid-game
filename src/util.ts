@@ -79,9 +79,9 @@ export function handleCollisions() {
 
     const astrId = state.baseEntities.data.typeId[astrBaseId];
 
-    if (speed > 500 && state.asteroids.data.hurtCooldown[astrId] <= 0) {
+    if (speed > 500) {
       d.color[astrBaseId] = state.colors.asteroidHurt;
-      state.asteroids.data.health[astrId] -= 50;
+      state.asteroids.data.health[astrId] -= 20;
       state.asteroids.data.damageColorTimer[astrId] = 0.15;
       state.asteroids.data.hurtCooldown[astrId] = 0.5;
     }

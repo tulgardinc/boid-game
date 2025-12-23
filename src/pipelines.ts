@@ -69,6 +69,6 @@ export function getTrailPipeline(
         },
       ],
     },
-    primitive: { topology: "triangle-strip" },
+    primitive: { topology: "triangle-strip", stripIndexFormat: "uint16" },
   });
 }

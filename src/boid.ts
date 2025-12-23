@@ -103,8 +103,33 @@ export function updateBoids() {
     const axLong = longForce * fwdx;
     const ayLong = longForce * fwdy;
 
-    d.aclX[baseId] = axThrust + axSide + axLong;
-    d.aclY[baseId] = ayThrust + aySide + ayLong;
+    let axPush = 0;
+    let ayPush = 0;
+
+    const PUSH_DIST = 50;
+    const MAX_PUSH_FORCE = 350;
+
+    for (let j = 0; j < state.boids.len; j++) {
+      if (j == i) continue;
+
+      const otherBase = state.boids.data.baseId[j];
+      const diffX = d.x[baseId] - d.x[otherBase];
+      const diffY = d.y[baseId] - d.y[otherBase];
+      const dist = Math.hypot(diffX, diffY);
+
+      if (dist > PUSH_DIST) continue;
+
+      const normX = diffX / dist;
+      const normY = diffY / dist;
+
+      const force = (1 - dist / PUSH_DIST) * MAX_PUSH_FORCE;
+
+      axPush += normX * force;
+      ayPush += normY * force;
+    }
+
+    d.aclX[baseId] = axThrust + axSide + axLong + axPush;
+    d.aclY[baseId] = ayThrust + aySide + ayLong + ayPush;
   }
 }
 
@@ -117,6 +142,12 @@ export function updateBoidTrails() {
     const baseId = state.boids.data.baseId[i];
     const eId = d.entityId[baseId];
     const trailIndex = state.idToTrailLookup[eId];
+
+    if (state.trails.data.length[trailIndex] == 0) {
+      addTrailPoint(trailIndex, d.x[baseId], d.y[baseId]);
+      continue;
+    }
+
     const tailIndex = state.trails.data.tail[trailIndex];
 
     const rad = (d.r[baseId] * Math.PI) / 180;
@@ -146,6 +177,24 @@ export function updateBoidTrails() {
 }
 
 export function boidInit() {
-  createBoid({ x: 0, y: 0 });
-  //createBoid({ x: -50, y: 0 });
+  createBoid({ x: 200, y: 0 });
+  createBoid({ x: -200, y: 0 });
+  createBoid({ x: 300, y: 0 });
+  createBoid({ x: -300, y: 0 });
+  createBoid({ x: 400, y: 0 });
+  createBoid({ x: -400, y: 0 });
+
+  createBoid({ x: 200, y: 100 });
+  createBoid({ x: -200, y: 100 });
+  createBoid({ x: 300, y: 100 });
+  createBoid({ x: -300, y: 100 });
+  createBoid({ x: 400, y: 100 });
+  createBoid({ x: -400, y: 100 });
+
+  createBoid({ x: 200, y: -100 });
+  createBoid({ x: -200, y: -100 });
+  createBoid({ x: 300, y: -100 });
+  createBoid({ x: -300, y: -100 });
+  createBoid({ x: 400, y: -100 });
+  createBoid({ x: -400, y: -100 });
 }
