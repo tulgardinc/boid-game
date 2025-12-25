@@ -13,14 +13,14 @@ export const HURT_COOLDOWN_DURATION = 0.5;
 export function addHurtCooldown(
   asteroidId: number,
   boidId: number,
-  timer: number
+  expiry: number
 ) {
   const key = `${asteroidId}-${boidId}`;
   state.cantHurtSet.add(key);
   appendSoA(state.hurtCooldowns, {
     asteroidId,
     boidId,
-    timer,
+    expiry,
   });
 }
 
@@ -123,19 +123,24 @@ export function handleCollisions() {
     if (speed > 500) {
       state.asteroids.data.health[astrIdx] -= BOID_DAMAGE;
 
-      state.asteroids.data.damageColorTimer[astrIdx] =
-        ASTEROID_DAMAGE_COLOR_DURATION;
+      state.asteroids.data.damageColorExpiry[astrIdx] =
+        state.time.now + ASTEROID_DAMAGE_COLOR_DURATION;
       d.color[astrBaseIdx] = state.colors.asteroidHurt;
 
       state.asteroids.data.shrinkTimer[astrIdx] = ASTEROID_SHRINK_DURATION;
       state.baseEntities.data.scaleX[astrBaseIdx] = ASTEROID_HIT_SCALE;
       state.baseEntities.data.scaleY[astrBaseIdx] = ASTEROID_HIT_SCALE;
 
-      state.asteroids.data.stopTimer[astrIdx] = ASTEROID_STOP_DURATION;
+      state.asteroids.data.stopExpiry[astrIdx] =
+        state.time.now + ASTEROID_STOP_DURATION;
       state.baseEntities.data.velX[astrBaseIdx] = 0;
       state.baseEntities.data.velY[astrBaseIdx] = 0;
 
-      addHurtCooldown(asteroidId, boidId, HURT_COOLDOWN_DURATION);
+      addHurtCooldown(
+        asteroidId,
+        boidId,
+        state.time.now + HURT_COOLDOWN_DURATION
+      );
     }
   }
 

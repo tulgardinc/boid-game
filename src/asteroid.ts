@@ -66,13 +66,13 @@ function createAsteroid() {
 
   const typeIdx = appendSoA(state.asteroids, {
     health: ASTEROID_HEALTH,
-    damageColorTimer: null,
+    damageColorExpiry: null,
     baseIdx,
     shrinkTimer: null,
     defaultScale: scale,
     defaultVelX: velX,
     defaultVelY: velY,
-    stopTimer: null,
+    stopExpiry: null,
   });
 
   state.baseEntities.data.typeIdx[baseIdx] = typeIdx;
@@ -83,10 +83,9 @@ function createAsteroid() {
 export function asteroidUpdate() {
   const ad = state.asteroids.data;
 
-  state.asteroidTimer += state.time.deltaTime;
-  if (state.asteroidTimer >= 1) {
+  if (state.time.now >= state.nextAsteroidSpawn) {
     createAsteroid();
-    state.asteroidTimer = 0;
+    state.nextAsteroidSpawn = state.time.now + 1;
   }
 
   for (let i = 0; i < state.asteroids.len; i++) {
@@ -96,13 +95,9 @@ export function asteroidUpdate() {
       continue;
     }
 
-    if (ad.damageColorTimer[i]) {
-      if (ad.damageColorTimer[i]! > 0) {
-        ad.damageColorTimer[i]! -= state.time.deltaTime;
-      } else {
-        ad.damageColorTimer[i] = null;
-        state.baseEntities.data.color[baseIdx] = state.colors.asteroid;
-      }
+    if (ad.damageColorExpiry[i] && state.time.now >= ad.damageColorExpiry[i]!) {
+      ad.damageColorExpiry[i] = null;
+      state.baseEntities.data.color[baseIdx] = state.colors.asteroid;
     }
 
     const st = ad.shrinkTimer[i];
@@ -122,23 +117,16 @@ export function asteroidUpdate() {
       }
     }
 
-    const stopT = ad.stopTimer[i];
-    if (stopT) {
-      if (stopT > 0) {
-        ad.stopTimer[i]! -= state.time.deltaTime;
-      } else {
-        ad.stopTimer[i] = null;
-        state.baseEntities.data.velX[baseIdx] = ad.defaultVelX[i];
-        state.baseEntities.data.velY[baseIdx] = ad.defaultVelY[i];
-      }
+    if (ad.stopExpiry[i] && state.time.now >= ad.stopExpiry[i]!) {
+      ad.stopExpiry[i] = null;
+      state.baseEntities.data.velX[baseIdx] = ad.defaultVelX[i];
+      state.baseEntities.data.velY[baseIdx] = ad.defaultVelY[i];
     }
   }
 
-  // Count down hurt cooldowns
-  const hcd = state.hurtCooldowns.data;
+  // Remove expired hurt cooldowns
   for (let i = state.hurtCooldowns.len - 1; i >= 0; i--) {
-    hcd.timer[i] -= state.time.deltaTime;
-    if (hcd.timer[i] <= 0) {
+    if (state.time.now >= state.hurtCooldowns.data.expiry[i]) {
       removeHurtCooldown(i);
     }
   }

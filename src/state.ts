@@ -57,9 +57,9 @@ export type BaseEntity = {
 export type Asteroid = {
   baseIdx: number;
   health: number;
-  damageColorTimer: number | null;
+  damageColorExpiry: number | null;
   shrinkTimer: number | null;
-  stopTimer: number | null;
+  stopExpiry: number | null;
   defaultScale: number;
   defaultVelX: number;
   defaultVelY: number;
@@ -83,7 +83,7 @@ export type InnerHealthBar = {
 export type HurtCooldown = {
   asteroidId: number;
   boidId: number;
-  timer: number;
+  expiry: number;
 };
 
 export const MAX_TRAIL_LENGTH = 50;
@@ -128,13 +128,13 @@ export const state = {
   }),
   asteroids: makeSoA<Asteroid>(100, {
     health: 0,
-    damageColorTimer: null,
+    damageColorExpiry: null,
     baseIdx: 0,
     shrinkTimer: null,
     defaultScale: 0,
     defaultVelX: 0,
     defaultVelY: 0,
-    stopTimer: null,
+    stopExpiry: null,
   }),
   boids: makeSoA<Boid>(100, {
     baseIdx: 0,
@@ -152,7 +152,7 @@ export const state = {
   hurtCooldowns: makeSoA<HurtCooldown>(100, {
     asteroidId: 0,
     boidId: 0,
-    timer: 0,
+    expiry: 0,
   }),
   colors: {
     boid: { r: 1, g: 1, b: 1 },
@@ -166,9 +166,10 @@ export const state = {
   time: {
     deltaTime: 0,
     lastTime: 0,
+    now: 0,
   },
   deleteSchedule: Array<number>(),
-  asteroidTimer: 0,
+  nextAsteroidSpawn: 0,
   mousePos: {
     x: 0,
     y: 0,
@@ -323,6 +324,7 @@ export function deleteScheduledEntities() {
 export function deltaTimeUpdate() {
   const current = Date.now();
   state.time.deltaTime = (current - state.time.lastTime) / 1000;
+  state.time.now += state.time.deltaTime;
   state.time.lastTime = current;
 }
 
@@ -334,7 +336,10 @@ function registerEvents() {
 }
 
 export function initializeState() {
-  state.time.lastTime = Date.now();
+  const now = Date.now();
+  state.time.lastTime = now;
+  state.time.now = 0;
+  state.nextAsteroidSpawn = state.time.now + 1;
 
   registerEvents();
 
