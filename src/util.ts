@@ -43,21 +43,23 @@ export function detectCollisions() {
         colATop > colBBottom
       ) {
         state.collisions.push({
-          entityAId: i,
-          entityBId: j,
+          entityABaseIdx: i,
+          entityBBaseIdx: j,
         });
       }
     }
   }
 }
 
+let frameCounter = 0;
+
 export function handleCollisions() {
   const d = state.baseEntities.data;
   const curCollisions = new Set<string>();
 
   for (const collision of state.collisions) {
-    const aBaseIdx = collision.entityAId;
-    const bBaseIdx = collision.entityBId;
+    const aBaseIdx = collision.entityABaseIdx;
+    const bBaseIdx = collision.entityBBaseIdx;
 
     const key = `${aBaseIdx}-${bBaseIdx}`;
     curCollisions.add(key);
@@ -90,17 +92,25 @@ export function handleCollisions() {
     const astrIdx = state.baseEntities.data.typeIdx[astrBaseIdx];
 
     if (speed > 500) {
-      d.color[astrBaseIdx] = state.colors.asteroidHurt;
+      console.log(
+        `FRAME ${frameCounter}: Collision between boid ${boidBaseIdx} and asteroid ${astrBaseIdx}`
+      );
+
+      console.log("HIT");
+
       state.asteroids.data.health[astrIdx] -= BOID_DAMAGE;
+
       state.asteroids.data.damageColorTimer[astrIdx] =
         ASTEROID_DAMAGE_COLOR_DURATION;
+      d.color[astrBaseIdx] = state.colors.asteroidHurt;
+
       state.asteroids.data.shrinkTimer[astrIdx] = ASTEROID_SHRINK_DURATION;
       state.baseEntities.data.scaleX[astrBaseIdx] = ASTEROID_HIT_SCALE;
       state.baseEntities.data.scaleY[astrBaseIdx] = ASTEROID_HIT_SCALE;
 
+      state.asteroids.data.stopTimer[astrIdx] = ASTEROID_STOP_DURATION;
       state.baseEntities.data.velX[astrBaseIdx] = 0;
       state.baseEntities.data.velY[astrBaseIdx] = 0;
-      state.asteroids.data.stopTimer[astrIdx] = ASTEROID_STOP_DURATION;
     }
   }
 
@@ -112,6 +122,7 @@ export function handleCollisions() {
 
   state.prevCollisions = curCollisions;
   state.collisions.length = 0;
+  frameCounter++;
 }
 
 export function angleDiff(a: number, b: number) {
@@ -125,4 +136,15 @@ export function lerp(t: number, a: number, b: number) {
 
 export function easeOutCubic(t: number, a: number, b: number) {
   return a + (b - a) * (1 - Math.pow(1 - t, 3));
+}
+
+export function expApproach(
+  current: number,
+  target: number,
+  dt: number,
+  halfLifeSeconds: number
+) {
+  const k = Math.log(2) / halfLifeSeconds;
+  const a = 1 - Math.exp(-k * dt); // 0..1 blend factor, framerate independent
+  return current + (target - current) * a;
 }

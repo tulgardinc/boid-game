@@ -4,8 +4,8 @@ import { Color } from "./color";
 import { appendSoA, makeSoA, StructOfArrays, swapDelete } from "./SoA";
 
 export type Collision = {
-  entityAId: number;
-  entityBId: number;
+  entityABaseIdx: number;
+  entityBBaseIdx: number;
 };
 
 export type TrailPointArray = {
@@ -77,6 +77,7 @@ export type OuterHealthBar = {
 export type InnerHealthBar = {
   baseIdx: number;
   outerEntityId: number;
+  targetWidth: number;
 };
 
 export const MAX_TRAIL_LENGTH = 50;
@@ -139,6 +140,7 @@ export const state = {
   innerHealthBars: makeSoA<InnerHealthBar>(100, {
     outerEntityId: 0,
     baseIdx: 0,
+    targetWidth: 0,
   }),
   colors: {
     boid: { r: 1, g: 1, b: 1 },

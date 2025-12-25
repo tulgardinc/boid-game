@@ -3,15 +3,15 @@ import { appendSoA } from "./SoA";
 import { addBaseEntity, EntityType, scheduleForDelete, state } from "./state";
 import { easeOutCubic } from "./util";
 
+export const ASTEROID_HIT_SCALE = 0.8;
+export const ASTEROID_SHRINK_DURATION = 0.15;
+export const ASTEROID_DAMAGE_COLOR_DURATION = 0.15;
+export const ASTEROID_STOP_DURATION = 0.12;
+export const ASTEROID_HEALTH = 100;
+
 function randomStep() {
   return Math.random() > 0.5 ? 1 : -1;
 }
-
-export const ASTEROID_HIT_SCALE = 0.9;
-export const ASTEROID_SHRINK_DURATION = 0.2;
-export const ASTEROID_DAMAGE_COLOR_DURATION = 0.15;
-export const ASTEROID_STOP_DURATION = 0.06;
-
 function createAsteroid() {
   const maxScale = 250;
   const minScale = 150;
@@ -65,7 +65,7 @@ function createAsteroid() {
   });
 
   const typeIdx = appendSoA(state.asteroids, {
-    health: 100,
+    health: ASTEROID_HEALTH,
     damageColorTimer: null,
     baseIdx,
     shrinkTimer: null,
@@ -130,9 +130,6 @@ export function asteroidUpdate() {
         ad.stopTimer[i] = null;
         state.baseEntities.data.velX[baseIdx] = ad.defaultVelX[i];
         state.baseEntities.data.velY[baseIdx] = ad.defaultVelY[i];
-
-        console.log(state.baseEntities.data.velX[baseIdx]);
-        console.log(state.baseEntities.data.velY[baseIdx]);
       }
     }
   }

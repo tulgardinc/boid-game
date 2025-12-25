@@ -1,9 +1,11 @@
 import { appendSoA } from "./SoA";
 import { addBaseEntity, EntityType, scheduleForDelete, state } from "./state";
+import { expApproach } from "./util";
 
 const OUTER_WIDTH = 150;
 const INNER_MAX_WIDTH = 148;
 const VERTICAL_OFFSET = 150;
+const TRANSITION_HALFLIFE = 0.08;
 
 export function createHealthBar(
   pos: { x: number; y: number },
@@ -69,6 +71,7 @@ export function createHealthBar(
   const innerTypeIdx = appendSoA(state.innerHealthBars, {
     baseIdx: innerBaseIdx,
     outerEntityId,
+    targetWidth: INNER_MAX_WIDTH,
   });
 
   state.baseEntities.data.typeIdx[innerBaseIdx] = innerTypeIdx;
@@ -104,8 +107,23 @@ export function updateHealthBars() {
     d.y[outBaseIdx] = d.y[astBaseIdx] + VERTICAL_OFFSET;
 
     d.y[inBaseIdx] = d.y[outBaseIdx];
-    const newWidth = INNER_MAX_WIDTH * (health / 100);
-    d.x[inBaseIdx] = d.x[outBaseIdx] - (INNER_MAX_WIDTH - newWidth) / 2;
-    d.scaleX[inBaseIdx] = newWidth;
+    const targetWidth = INNER_MAX_WIDTH * (health / 100);
+    inD.targetWidth[inIdx] = targetWidth;
+
+    let curWidth = d.scaleX[inBaseIdx];
+    if (curWidth > targetWidth) {
+      curWidth = Math.max(
+        expApproach(
+          curWidth,
+          targetWidth,
+          state.time.deltaTime,
+          TRANSITION_HALFLIFE
+        ),
+        targetWidth
+      );
+      d.scaleX[inBaseIdx] = curWidth;
+    }
+
+    d.x[inBaseIdx] = d.x[outBaseIdx] - (INNER_MAX_WIDTH - curWidth) / 2;
   }
 }

@@ -180,7 +180,7 @@ export function updateBoidTrails() {
 
 export function boidInit() {
   createBoid({ x: 200, y: 0 });
-  createBoid({ x: -200, y: 0 });
+  // createBoid({ x: -200, y: 0 });
   // createBoid({ x: 300, y: 0 });
   // createBoid({ x: -300, y: 0 });
   // createBoid({ x: 400, y: 0 });
