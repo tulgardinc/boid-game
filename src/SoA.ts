@@ -1,5 +1,3 @@
-import { InnerHealthBar } from "./state";
-
 export type StructOfArrays<T> = {
   data: { [K in keyof T]: T[K][] };
   len: number;
@@ -34,7 +32,7 @@ export function appendSoA<T extends object>(
   return id;
 }
 
-export function swapDelete<T extends object>(
+export function swapDeleteSoA<T extends object>(
   idx: number,
   soa: StructOfArrays<T>
 ) {

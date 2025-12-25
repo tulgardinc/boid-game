@@ -5,7 +5,7 @@ import { expApproach } from "./util";
 const OUTER_WIDTH = 150;
 const INNER_MAX_WIDTH = 148;
 const VERTICAL_OFFSET = 150;
-const TRANSITION_HALFLIFE = 0.08;
+const TRANSITION_HALFLIFE = 0.02;
 
 export function createHealthBar(
   pos: { x: number; y: number },

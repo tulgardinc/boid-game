@@ -1,7 +1,7 @@
 import { asteroidInit } from "./asteroid";
 import { boidInit } from "./boid";
 import { Color } from "./color";
-import { appendSoA, makeSoA, StructOfArrays, swapDelete } from "./SoA";
+import { appendSoA, makeSoA, StructOfArrays, swapDeleteSoA } from "./SoA";
 
 export type Collision = {
   entityABaseIdx: number;
@@ -80,6 +80,12 @@ export type InnerHealthBar = {
   targetWidth: number;
 };
 
+export type HurtCooldown = {
+  asteroidId: number;
+  boidId: number;
+  timer: number;
+};
+
 export const MAX_TRAIL_LENGTH = 50;
 
 export const state = {
@@ -142,6 +148,12 @@ export const state = {
     baseIdx: 0,
     targetWidth: 0,
   }),
+  cantHurtSet: new Set<string>(),
+  hurtCooldowns: makeSoA<HurtCooldown>(100, {
+    asteroidId: 0,
+    boidId: 0,
+    timer: 0,
+  }),
   colors: {
     boid: { r: 1, g: 1, b: 1 },
     asteroid: { r: 1, g: 0, b: 0.2 },
@@ -179,7 +191,7 @@ export function swapDeleteTrail(ownerId: number) {
       state.trailPoints.data.y[finalTrailOffset + i];
   }
 
-  swapDelete(trailToDeleteIndx, state.trails);
+  swapDeleteSoA(trailToDeleteIndx, state.trails);
   state.trailPoints.len -= MAX_TRAIL_LENGTH;
 
   if (finalTrailOwner != ownerId)
@@ -275,14 +287,14 @@ function destroyEntity(entityIdToDelete: number) {
 
   const typeLast = typeTableForEntityToDelete.len - 1;
 
-  swapDelete(baseIdxToDelete, state.baseEntities);
+  swapDeleteSoA(baseIdxToDelete, state.baseEntities);
 
   if (baseIdxToDelete != baseLast) {
     state.idToBaseLookup[entityIdLast] = baseIdxToDelete;
     typeTableForLastEntity.data.baseIdx[typeIdxOfLastE] = baseIdxToDelete;
   }
 
-  swapDelete(typeIdxToDelete, typeTableForEntityToDelete);
+  swapDeleteSoA(typeIdxToDelete, typeTableForEntityToDelete);
 
   if (typeIdxToDelete != typeLast) {
     const baseIdxOfLastType =

@@ -1,7 +1,7 @@
 import { createHealthBar } from "./healthbar";
-import { appendSoA } from "./SoA";
+import { appendSoA, swapDeleteSoA } from "./SoA";
 import { addBaseEntity, EntityType, scheduleForDelete, state } from "./state";
-import { easeOutCubic } from "./util";
+import { easeOutCubic, removeHurtCooldown } from "./util";
 
 export const ASTEROID_HIT_SCALE = 0.8;
 export const ASTEROID_SHRINK_DURATION = 0.15;
@@ -131,6 +131,15 @@ export function asteroidUpdate() {
         state.baseEntities.data.velX[baseIdx] = ad.defaultVelX[i];
         state.baseEntities.data.velY[baseIdx] = ad.defaultVelY[i];
       }
+    }
+  }
+
+  // Count down hurt cooldowns
+  const hcd = state.hurtCooldowns.data;
+  for (let i = state.hurtCooldowns.len - 1; i >= 0; i--) {
+    hcd.timer[i] -= state.time.deltaTime;
+    if (hcd.timer[i] <= 0) {
+      removeHurtCooldown(i);
     }
   }
 }

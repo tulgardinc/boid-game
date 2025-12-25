@@ -5,7 +5,31 @@ import {
   ASTEROID_STOP_DURATION,
 } from "./asteroid";
 import { BOID_DAMAGE } from "./boid";
+import { appendSoA, swapDeleteSoA } from "./SoA";
 import { EntityType, state } from "./state";
+
+export const HURT_COOLDOWN_DURATION = 0.5;
+
+export function addHurtCooldown(
+  asteroidId: number,
+  boidId: number,
+  timer: number
+) {
+  const key = `${asteroidId}-${boidId}`;
+  state.cantHurtSet.add(key);
+  appendSoA(state.hurtCooldowns, {
+    asteroidId,
+    boidId,
+    timer,
+  });
+}
+
+export function removeHurtCooldown(index: number) {
+  const hcd = state.hurtCooldowns.data;
+  const key = `${hcd.asteroidId[index]}-${hcd.boidId[index]}`;
+  state.cantHurtSet.delete(key);
+  swapDeleteSoA(index, state.hurtCooldowns);
+}
 
 export function physicsUpdate() {
   for (let i = 0; i < state.baseEntities.len; i++) {
@@ -61,7 +85,10 @@ export function handleCollisions() {
     const aBaseIdx = collision.entityABaseIdx;
     const bBaseIdx = collision.entityBBaseIdx;
 
-    const key = `${aBaseIdx}-${bBaseIdx}`;
+    const asteroidId = d.entityId[aBaseIdx];
+    const boidId = d.entityId[bBaseIdx];
+    const key = `${asteroidId}-${boidId}`;
+
     curCollisions.add(key);
 
     if (state.prevCollisions.has(key)) continue;
@@ -89,15 +116,11 @@ export function handleCollisions() {
         d.velY[boidBaseIdx] * d.velY[boidBaseIdx]
     );
 
+    if (state.cantHurtSet.has(key)) continue;
+
     const astrIdx = state.baseEntities.data.typeIdx[astrBaseIdx];
 
     if (speed > 500) {
-      console.log(
-        `FRAME ${frameCounter}: Collision between boid ${boidBaseIdx} and asteroid ${astrBaseIdx}`
-      );
-
-      console.log("HIT");
-
       state.asteroids.data.health[astrIdx] -= BOID_DAMAGE;
 
       state.asteroids.data.damageColorTimer[astrIdx] =
@@ -111,6 +134,8 @@ export function handleCollisions() {
       state.asteroids.data.stopTimer[astrIdx] = ASTEROID_STOP_DURATION;
       state.baseEntities.data.velX[astrBaseIdx] = 0;
       state.baseEntities.data.velY[astrBaseIdx] = 0;
+
+      addHurtCooldown(asteroidId, boidId, HURT_COOLDOWN_DURATION);
     }
   }
 
