@@ -1,6 +1,6 @@
 import {
   initializeState,
-  deltaTimeUpdate,
+  updateGameTime,
   deleteScheduledEntities,
 } from "./state";
 import "./style.css";
@@ -59,7 +59,7 @@ async function main() {
 
   function render() {
     // system logic
-    deltaTimeUpdate();
+    updateGameTime();
 
     // game logic
     asteroidUpdate();

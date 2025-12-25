@@ -1,7 +1,7 @@
 import { asteroidInit } from "./asteroid";
 import { boidInit } from "./boid";
 import { Color } from "./color";
-import { appendSoA, makeSoA, StructOfArrays, swapDeleteSoA } from "./SoA";
+import { appendSoA, makeSoA, swapDeleteSoA } from "./SoA";
 
 export type Collision = {
   entityABaseIdx: number;
@@ -321,7 +321,7 @@ export function deleteScheduledEntities() {
   state.deleteSchedule.length = 0;
 }
 
-export function deltaTimeUpdate() {
+export function updateGameTime() {
   const current = Date.now();
   state.time.deltaTime = (current - state.time.lastTime) / 1000;
   state.time.now += state.time.deltaTime;
