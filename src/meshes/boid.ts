@@ -36,12 +36,12 @@ export function getBoidIndexBufer(device: GPUDevice) {
 }
 
 export function renderBoids(device: GPUDevice) {
-  const boidIds = [];
+  const boidBaseIdxs = [];
   for (let i = 0; i < state.boids.len; i++) {
-    boidIds.push(state.boids.data.baseId[i]);
+    boidBaseIdxs.push(state.boids.data.baseIdx[i]);
   }
 
-  const firstInstance = updateTransformColorGPUData(device, boidIds);
+  const firstInstance = updateTransformColorGPUData(device, boidBaseIdxs);
 
   renderer.renderQueue.push({
     pipeline: "transform2D",

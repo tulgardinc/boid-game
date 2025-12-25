@@ -1,10 +1,16 @@
 import { createHealthBar } from "./healthbar";
 import { appendSoA } from "./SoA";
 import { addBaseEntity, EntityType, scheduleForDelete, state } from "./state";
+import { easeOutCubic } from "./util";
 
 function randomStep() {
   return Math.random() > 0.5 ? 1 : -1;
 }
+
+export const ASTEROID_HIT_SCALE = 0.9;
+export const ASTEROID_SHRINK_DURATION = 0.2;
+export const ASTEROID_DAMAGE_COLOR_DURATION = 0.15;
+export const ASTEROID_STOP_DURATION = 0.06;
 
 function createAsteroid() {
   const maxScale = 250;
@@ -26,7 +32,14 @@ function createAsteroid() {
 
   const scale = Math.random() * (maxScale - minScale) + minScale;
 
-  const { baseId, entityId } = addBaseEntity({
+  const velX =
+    -(Math.abs(spawnX) / spawnX) *
+    (Math.random() * (maxSpeed - minSpeed) + minSpeed);
+  const velY =
+    -(Math.abs(spawnY) / spawnY) *
+    (Math.random() * (maxSpeed - minSpeed) + minSpeed);
+
+  const { baseIdx, entityId } = addBaseEntity({
     type: EntityType.Asteroid,
 
     x: spawnX,
@@ -36,12 +49,8 @@ function createAsteroid() {
     scaleX: scale,
     scaleY: scale,
 
-    velX:
-      -(Math.abs(spawnX) / spawnX) *
-      (Math.random() * (maxSpeed - minSpeed) + minSpeed),
-    velY:
-      -(Math.abs(spawnY) / spawnY) *
-      (Math.random() * (maxSpeed - minSpeed) + minSpeed),
+    velX,
+    velY,
     velR: randomStep() * Math.random() * (50 - 10) + 10,
 
     aclX: 0,
@@ -52,17 +61,21 @@ function createAsteroid() {
 
     colHalfWidth: 0.5,
     colHalfHeight: 0.5,
-    typeId: 0,
+    typeIdx: 0,
   });
 
-  const typeId = appendSoA(state.asteroids, {
+  const typeIdx = appendSoA(state.asteroids, {
     health: 100,
     damageColorTimer: null,
-    hurtCooldown: 0,
-    baseId,
+    baseIdx,
+    shrinkTimer: null,
+    defaultScale: scale,
+    defaultVelX: velX,
+    defaultVelY: velY,
+    stopTimer: null,
   });
 
-  state.baseEntities.data.typeId[baseId] = typeId;
+  state.baseEntities.data.typeIdx[baseIdx] = typeIdx;
 
   createHealthBar({ x: spawnX, y: spawnY }, entityId);
 }
@@ -77,9 +90,9 @@ export function asteroidUpdate() {
   }
 
   for (let i = 0; i < state.asteroids.len; i++) {
-    const bId = state.asteroids.data.baseId[i];
+    const baseIdx = state.asteroids.data.baseIdx[i];
     if (ad.health[i] <= 0) {
-      scheduleForDelete(state.baseEntities.data.entityId[bId]);
+      scheduleForDelete(state.baseEntities.data.entityId[baseIdx]);
       continue;
     }
 
@@ -88,12 +101,39 @@ export function asteroidUpdate() {
         ad.damageColorTimer[i]! -= state.time.deltaTime;
       } else {
         ad.damageColorTimer[i] = null;
-        state.baseEntities.data.color[bId] = state.colors.asteroid;
+        state.baseEntities.data.color[baseIdx] = state.colors.asteroid;
       }
     }
 
-    if (ad.hurtCooldown[i] > 0) {
-      ad.hurtCooldown[i] -= state.time.deltaTime;
+    const st = ad.shrinkTimer[i];
+    if (st) {
+      if (st > 0) {
+        const tNorm = st / ASTEROID_SHRINK_DURATION;
+        const scaleMult = easeOutCubic(1 - tNorm, ASTEROID_HIT_SCALE, 1);
+        state.baseEntities.data.scaleX[baseIdx] =
+          ad.defaultScale[i] * scaleMult;
+        state.baseEntities.data.scaleY[baseIdx] =
+          ad.defaultScale[i] * scaleMult;
+        ad.shrinkTimer[i]! -= state.time.deltaTime;
+      } else {
+        ad.shrinkTimer[i] = null;
+        state.baseEntities.data.scaleX[baseIdx] = ad.defaultScale[i];
+        state.baseEntities.data.scaleY[baseIdx] = ad.defaultScale[i];
+      }
+    }
+
+    const stopT = ad.stopTimer[i];
+    if (stopT) {
+      if (stopT > 0) {
+        ad.stopTimer[i]! -= state.time.deltaTime;
+      } else {
+        ad.stopTimer[i] = null;
+        state.baseEntities.data.velX[baseIdx] = ad.defaultVelX[i];
+        state.baseEntities.data.velY[baseIdx] = ad.defaultVelY[i];
+
+        console.log(state.baseEntities.data.velX[baseIdx]);
+        console.log(state.baseEntities.data.velY[baseIdx]);
+      }
     }
   }
 }

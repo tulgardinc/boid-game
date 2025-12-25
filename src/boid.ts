@@ -9,8 +9,10 @@ import {
 } from "./state";
 import { angleDiff } from "./util";
 
+export const BOID_DAMAGE = 20;
+
 function createBoid(pos: { x: number; y: number }) {
-  const { baseId, entityId } = addBaseEntity({
+  const { baseIdx, entityId } = addBaseEntity({
     type: EntityType.Boid,
 
     x: pos.x,
@@ -32,14 +34,14 @@ function createBoid(pos: { x: number; y: number }) {
 
     colHalfWidth: 0.5,
     colHalfHeight: 0.5,
-    typeId: 0,
+    typeIdx: 0,
   });
 
-  const typeId = appendSoA(state.boids, {
-    baseId,
+  const typeIdx = appendSoA(state.boids, {
+    baseIdx,
   });
 
-  state.baseEntities.data.typeId[baseId] = typeId;
+  state.baseEntities.data.typeIdx[baseIdx] = typeIdx;
 
   createNewTrail(entityId);
 }
@@ -53,13 +55,13 @@ export function updateBoids() {
   const d = state.baseEntities.data;
 
   for (let i = 0; i < state.boids.len; i++) {
-    const baseId = state.boids.data.baseId[i];
+    const baseIdx = state.boids.data.baseIdx[i];
 
     // handle movement
 
     const dir = { x: 0, y: 0 };
-    dir.x = target.x - d.x[baseId];
-    dir.y = target.y - d.y[baseId];
+    dir.x = target.x - d.x[baseIdx];
+    dir.y = target.y - d.y[baseIdx];
     const dist = Math.hypot(dir.x, dir.y);
     dir.x /= dist;
     dir.y /= dist;
@@ -69,22 +71,22 @@ export function updateBoids() {
       targetAngle += 360;
     }
 
-    const error = angleDiff(targetAngle, d.r[baseId]);
+    const error = angleDiff(targetAngle, d.r[baseIdx]);
 
     const Kp = 28;
     const Kd = 8;
 
-    d.aclR[baseId] = Kp * error - Kd * d.velR[baseId];
+    d.aclR[baseIdx] = Kp * error - Kd * d.velR[baseIdx];
 
-    const rad = (d.r[baseId] * Math.PI) / 180;
+    const rad = (d.r[baseIdx] * Math.PI) / 180;
     const fwdx = -Math.sin(rad);
     const fwdy = Math.cos(rad);
 
     const sidex = fwdy;
     const sidey = -fwdx;
 
-    const vForward = d.velX[baseId] * fwdx + d.velY[baseId] * fwdy;
-    const vSide = d.velX[baseId] * sidex + d.velY[baseId] * sidey;
+    const vForward = d.velX[baseIdx] * fwdx + d.velY[baseIdx] * fwdy;
+    const vSide = d.velX[baseIdx] * sidex + d.velY[baseIdx] * sidey;
 
     const thrust = 450;
     const axThrust = fwdx * thrust;
@@ -112,9 +114,9 @@ export function updateBoids() {
     for (let j = 0; j < state.boids.len; j++) {
       if (j == i) continue;
 
-      const otherBase = state.boids.data.baseId[j];
-      const diffX = d.x[baseId] - d.x[otherBase];
-      const diffY = d.y[baseId] - d.y[otherBase];
+      const otherBaseIdx = state.boids.data.baseIdx[j];
+      const diffX = d.x[baseIdx] - d.x[otherBaseIdx];
+      const diffY = d.y[baseIdx] - d.y[otherBaseIdx];
       const dist = Math.hypot(diffX, diffY);
 
       if (dist > PUSH_DIST) continue;
@@ -128,8 +130,8 @@ export function updateBoids() {
       ayPush += normY * force;
     }
 
-    d.aclX[baseId] = axThrust + axSide + axLong + axPush;
-    d.aclY[baseId] = ayThrust + aySide + ayLong + ayPush;
+    d.aclX[baseIdx] = axThrust + axSide + axLong + axPush;
+    d.aclY[baseIdx] = ayThrust + aySide + ayLong + ayPush;
   }
 }
 
@@ -139,39 +141,39 @@ export function updateBoidTrails() {
   const MAX_DISTANCE = 1;
 
   for (let i = 0; i < state.boids.len; i++) {
-    const baseId = state.boids.data.baseId[i];
-    const eId = d.entityId[baseId];
-    const trailIndex = state.idToTrailLookup[eId];
+    const baseIdx = state.boids.data.baseIdx[i];
+    const entityId = d.entityId[baseIdx];
+    const trailIdx = state.idToTrailLookup[entityId];
 
-    if (state.trails.data.length[trailIndex] == 0) {
-      addTrailPoint(trailIndex, d.x[baseId], d.y[baseId]);
+    if (state.trails.data.length[trailIdx] == 0) {
+      addTrailPoint(trailIdx, d.x[baseIdx], d.y[baseIdx]);
       continue;
     }
 
-    const tailIndex = state.trails.data.tail[trailIndex];
+    const tailIdx = state.trails.data.tail[trailIdx];
 
-    const rad = (d.r[baseId] * Math.PI) / 180;
+    const rad = (d.r[baseIdx] * Math.PI) / 180;
     const fwdx = -Math.sin(rad);
     const fwdy = Math.cos(rad);
     const fwdLen = Math.hypot(fwdx, fwdy);
     const fwdxN = fwdx / fwdLen;
     const fwdyN = fwdy / fwdLen;
 
-    const x = d.x[baseId] - fwdxN * 8;
-    const y = d.y[baseId] - fwdyN * 8;
-    const absoluteTI = trailIndex * MAX_TRAIL_LENGTH + tailIndex;
-    const tailX = state.trailPoints.data.x[absoluteTI];
-    const tailY = state.trailPoints.data.y[absoluteTI];
+    const x = d.x[baseIdx] - fwdxN * 8;
+    const y = d.y[baseIdx] - fwdyN * 8;
+    const absoluteTPIdx = trailIdx * MAX_TRAIL_LENGTH + tailIdx;
+    const tailX = state.trailPoints.data.x[absoluteTPIdx];
+    const tailY = state.trailPoints.data.y[absoluteTPIdx];
     const distX = x - tailX;
     const distY = y - tailY;
 
     const dist = Math.hypot(distX, distY);
 
-    const speed = Math.hypot(d.velX[baseId], d.velY[baseId]);
+    const speed = Math.hypot(d.velX[baseIdx], d.velY[baseIdx]);
     const adaptiveDistance = MAX_DISTANCE * (1 + speed / 500);
 
     if (dist >= adaptiveDistance) {
-      addTrailPoint(trailIndex, x, y);
+      addTrailPoint(trailIdx, x, y);
     }
   }
 }
@@ -179,22 +181,22 @@ export function updateBoidTrails() {
 export function boidInit() {
   createBoid({ x: 200, y: 0 });
   createBoid({ x: -200, y: 0 });
-  createBoid({ x: 300, y: 0 });
-  createBoid({ x: -300, y: 0 });
-  createBoid({ x: 400, y: 0 });
-  createBoid({ x: -400, y: 0 });
+  // createBoid({ x: 300, y: 0 });
+  // createBoid({ x: -300, y: 0 });
+  // createBoid({ x: 400, y: 0 });
+  // createBoid({ x: -400, y: 0 });
 
-  createBoid({ x: 200, y: 100 });
-  createBoid({ x: -200, y: 100 });
-  createBoid({ x: 300, y: 100 });
-  createBoid({ x: -300, y: 100 });
-  createBoid({ x: 400, y: 100 });
-  createBoid({ x: -400, y: 100 });
+  // createBoid({ x: 200, y: 100 });
+  // createBoid({ x: -200, y: 100 });
+  // createBoid({ x: 300, y: 100 });
+  // createBoid({ x: -300, y: 100 });
+  // createBoid({ x: 400, y: 100 });
+  // createBoid({ x: -400, y: 100 });
 
-  createBoid({ x: 200, y: -100 });
-  createBoid({ x: -200, y: -100 });
-  createBoid({ x: 300, y: -100 });
-  createBoid({ x: -300, y: -100 });
-  createBoid({ x: 400, y: -100 });
-  createBoid({ x: -400, y: -100 });
+  // createBoid({ x: 200, y: -100 });
+  // createBoid({ x: -200, y: -100 });
+  // createBoid({ x: 300, y: -100 });
+  // createBoid({ x: -300, y: -100 });
+  // createBoid({ x: 400, y: -100 });
+  // createBoid({ x: -400, y: -100 });
 }

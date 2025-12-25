@@ -36,24 +36,24 @@ export function getQuadIndexBuffer(device: GPUDevice): GPUBuffer {
 }
 
 export function renderTexturedQuads(device: GPUDevice) {
-  const quadIds = [];
+  const quadBaseIdxs = [];
   for (let i = 0; i < state.asteroids.len; i++) {
-    quadIds.push(state.asteroids.data.baseId[i]);
+    quadBaseIdxs.push(state.asteroids.data.baseIdx[i]);
   }
   for (let i = 0; i < state.outerHealthBars.len; i++) {
-    quadIds.push(state.outerHealthBars.data.baseId[i]);
+    quadBaseIdxs.push(state.outerHealthBars.data.baseIdx[i]);
   }
   for (let i = 0; i < state.innerHealthBars.len; i++) {
-    quadIds.push(state.innerHealthBars.data.baseId[i]);
+    quadBaseIdxs.push(state.innerHealthBars.data.baseIdx[i]);
   }
 
-  const firstInstance = updateTransformColorGPUData(device, quadIds);
+  const firstInstance = updateTransformColorGPUData(device, quadBaseIdxs);
 
   renderer.renderQueue.push({
     pipeline: "transform2D",
     mesh: "quad",
     bindGroup: "camera",
-    instanceCount: quadIds.length,
+    instanceCount: quadBaseIdxs.length,
     firstInstance,
     indexCount: indices.length,
     kind: "mesh",

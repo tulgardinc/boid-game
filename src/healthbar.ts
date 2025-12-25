@@ -9,7 +9,7 @@ export function createHealthBar(
   pos: { x: number; y: number },
   asteroidEntityId: number
 ) {
-  const { baseId: outerBaseId, entityId: outerEntityId } = addBaseEntity({
+  const { baseIdx: outerBaseIdx, entityId: outerEntityId } = addBaseEntity({
     type: EntityType.HealthBarOuter,
 
     x: pos.x,
@@ -31,17 +31,17 @@ export function createHealthBar(
 
     colHalfWidth: 0.5,
     colHalfHeight: 0.5,
-    typeId: 0,
+    typeIdx: 0,
   });
 
-  const outerTypeId = appendSoA(state.outerHealthBars, {
+  const outerTypeIdx = appendSoA(state.outerHealthBars, {
     targetEntityId: asteroidEntityId,
-    baseId: outerBaseId,
+    baseIdx: outerBaseIdx,
   });
 
-  state.baseEntities.data.typeId[outerBaseId] = outerTypeId;
+  state.baseEntities.data.typeIdx[outerBaseIdx] = outerTypeIdx;
 
-  const { baseId: innerBaseId } = addBaseEntity({
+  const { baseIdx: innerBaseIdx } = addBaseEntity({
     type: EntityType.HealthBarInnner,
 
     x: pos.x,
@@ -63,15 +63,15 @@ export function createHealthBar(
 
     colHalfWidth: 0.5,
     colHalfHeight: 0.5,
-    typeId: 0,
+    typeIdx: 0,
   });
 
-  const innerTypeId = appendSoA(state.innerHealthBars, {
-    baseId: innerBaseId,
+  const innerTypeIdx = appendSoA(state.innerHealthBars, {
+    baseIdx: innerBaseIdx,
     outerEntityId,
   });
 
-  state.baseEntities.data.typeId[innerBaseId] = innerTypeId;
+  state.baseEntities.data.typeIdx[innerBaseIdx] = innerTypeIdx;
 }
 
 export function updateHealthBars() {
@@ -80,17 +80,17 @@ export function updateHealthBars() {
   const d = state.baseEntities.data;
 
   for (let inIdx = 0; inIdx < state.innerHealthBars.len; inIdx++) {
-    const inBaseIdx = state.innerHealthBars.data.baseId[inIdx];
+    const inBaseIdx = state.innerHealthBars.data.baseIdx[inIdx];
     const inEntityId = d.entityId[inBaseIdx];
 
     const outEntityId = inD.outerEntityId[inIdx];
     const outBaseIdx = state.idToBaseLookup[outEntityId]!;
-    const outIdx = d.typeId[outBaseIdx];
+    const outIdx = d.typeIdx[outBaseIdx];
 
     const astEntityId = outD.targetEntityId[outIdx];
     const astBaseIdx = state.idToBaseLookup[astEntityId];
 
-    const astIdx = d.typeId[astBaseIdx];
+    const astIdx = d.typeIdx[astBaseIdx];
 
     const health = state.asteroids.data.health[astIdx];
 

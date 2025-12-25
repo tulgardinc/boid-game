@@ -1,3 +1,10 @@
+import {
+  ASTEROID_DAMAGE_COLOR_DURATION,
+  ASTEROID_HIT_SCALE,
+  ASTEROID_SHRINK_DURATION,
+  ASTEROID_STOP_DURATION,
+} from "./asteroid";
+import { BOID_DAMAGE } from "./boid";
 import { EntityType, state } from "./state";
 
 export function physicsUpdate() {
@@ -49,41 +56,51 @@ export function handleCollisions() {
   const curCollisions = new Set<string>();
 
   for (const collision of state.collisions) {
-    const aId = collision.entityAId;
-    const bId = collision.entityBId;
+    const aBaseIdx = collision.entityAId;
+    const bBaseIdx = collision.entityBId;
 
-    const key = `${aId}-${bId}`;
+    const key = `${aBaseIdx}-${bBaseIdx}`;
     curCollisions.add(key);
 
     if (state.prevCollisions.has(key)) continue;
 
-    let boidBaseId;
-    let astrBaseId;
-    if (d.type[aId] == EntityType.Boid && d.type[bId] == EntityType.Asteroid) {
-      boidBaseId = aId;
-      astrBaseId = bId;
-    } else if (
-      d.type[aId] == EntityType.Asteroid &&
-      d.type[bId] == EntityType.Boid
+    let boidBaseIdx;
+    let astrBaseIdx;
+    if (
+      d.type[aBaseIdx] == EntityType.Boid &&
+      d.type[bBaseIdx] == EntityType.Asteroid
     ) {
-      astrBaseId = aId;
-      boidBaseId = bId;
+      boidBaseIdx = aBaseIdx;
+      astrBaseIdx = bBaseIdx;
+    } else if (
+      d.type[aBaseIdx] == EntityType.Asteroid &&
+      d.type[bBaseIdx] == EntityType.Boid
+    ) {
+      astrBaseIdx = aBaseIdx;
+      boidBaseIdx = bBaseIdx;
     } else {
       continue;
     }
 
     const speed = Math.sqrt(
-      d.velX[boidBaseId] * d.velX[boidBaseId] +
-        d.velY[boidBaseId] * d.velY[boidBaseId]
+      d.velX[boidBaseIdx] * d.velX[boidBaseIdx] +
+        d.velY[boidBaseIdx] * d.velY[boidBaseIdx]
     );
 
-    const astrId = state.baseEntities.data.typeId[astrBaseId];
+    const astrIdx = state.baseEntities.data.typeIdx[astrBaseIdx];
 
     if (speed > 500) {
-      d.color[astrBaseId] = state.colors.asteroidHurt;
-      state.asteroids.data.health[astrId] -= 20;
-      state.asteroids.data.damageColorTimer[astrId] = 0.15;
-      state.asteroids.data.hurtCooldown[astrId] = 0.5;
+      d.color[astrBaseIdx] = state.colors.asteroidHurt;
+      state.asteroids.data.health[astrIdx] -= BOID_DAMAGE;
+      state.asteroids.data.damageColorTimer[astrIdx] =
+        ASTEROID_DAMAGE_COLOR_DURATION;
+      state.asteroids.data.shrinkTimer[astrIdx] = ASTEROID_SHRINK_DURATION;
+      state.baseEntities.data.scaleX[astrBaseIdx] = ASTEROID_HIT_SCALE;
+      state.baseEntities.data.scaleY[astrBaseIdx] = ASTEROID_HIT_SCALE;
+
+      state.baseEntities.data.velX[astrBaseIdx] = 0;
+      state.baseEntities.data.velY[astrBaseIdx] = 0;
+      state.asteroids.data.stopTimer[astrIdx] = ASTEROID_STOP_DURATION;
     }
   }
 
@@ -100,4 +117,12 @@ export function handleCollisions() {
 export function angleDiff(a: number, b: number) {
   let d = a - b;
   return ((((d + 180) % 360) + 360) % 360) - 180;
+}
+
+export function lerp(t: number, a: number, b: number) {
+  return (1 - t) * a + t * b;
+}
+
+export function easeOutCubic(t: number, a: number, b: number) {
+  return a + (b - a) * (1 - Math.pow(1 - t, 3));
 }

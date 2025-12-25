@@ -31,7 +31,7 @@ export type BaseEntity = {
   entityId: number;
 
   type: EntityType;
-  typeId: number;
+  typeIdx: number;
 
   x: number;
   y: number;
@@ -55,23 +55,27 @@ export type BaseEntity = {
 };
 
 export type Asteroid = {
-  baseId: number;
+  baseIdx: number;
   health: number;
   damageColorTimer: number | null;
-  hurtCooldown: number;
+  shrinkTimer: number | null;
+  stopTimer: number | null;
+  defaultScale: number;
+  defaultVelX: number;
+  defaultVelY: number;
 };
 
 export type Boid = {
-  baseId: number;
+  baseIdx: number;
 };
 
 export type OuterHealthBar = {
-  baseId: number;
+  baseIdx: number;
   targetEntityId: number;
 };
 
 export type InnerHealthBar = {
-  baseId: number;
+  baseIdx: number;
   outerEntityId: number;
 };
 
@@ -112,25 +116,29 @@ export const state = {
     colHalfHeight: 0,
     scaleX: 0,
     scaleY: 0,
-    typeId: 0,
+    typeIdx: 0,
     entityId: 0,
   }),
   asteroids: makeSoA<Asteroid>(100, {
     health: 0,
     damageColorTimer: null,
-    hurtCooldown: 0,
-    baseId: 0,
+    baseIdx: 0,
+    shrinkTimer: null,
+    defaultScale: 0,
+    defaultVelX: 0,
+    defaultVelY: 0,
+    stopTimer: null,
   }),
   boids: makeSoA<Boid>(100, {
-    baseId: 0,
+    baseIdx: 0,
   }),
   outerHealthBars: makeSoA<OuterHealthBar>(100, {
     targetEntityId: 0,
-    baseId: 0,
+    baseIdx: 0,
   }),
   innerHealthBars: makeSoA<InnerHealthBar>(100, {
     outerEntityId: 0,
-    baseId: 0,
+    baseIdx: 0,
   }),
   colors: {
     boid: { r: 1, g: 1, b: 1 },
@@ -211,26 +219,26 @@ export function addTrailPoint(trailIndex: number, x: number, y: number) {
 }
 
 export function addBaseEntity(baseEntity: Omit<BaseEntity, "entityId">) {
-  let baseId = 0;
+  let baseIdx = 0;
   let entityId = 0;
   if (state.freedIds.length > 0) {
     entityId = state.freedIds.pop()!;
-    baseId = appendSoA(state.baseEntities, {
+    baseIdx = appendSoA(state.baseEntities, {
       ...baseEntity,
       entityId: entityId,
     });
-    state.idToBaseLookup[entityId!] = baseId;
+    state.idToBaseLookup[entityId!] = baseIdx;
   } else {
     entityId = state.currentId;
-    baseId = appendSoA(state.baseEntities, {
+    baseIdx = appendSoA(state.baseEntities, {
       ...baseEntity,
       entityId: state.currentId,
     });
-    state.idToBaseLookup[state.currentId] = baseId;
+    state.idToBaseLookup[state.currentId] = baseIdx;
     state.currentId++;
   }
 
-  return { baseId, entityId };
+  return { baseIdx, entityId };
 }
 
 function getTableFromKind(type: EntityType) {
@@ -249,15 +257,15 @@ function getTableFromKind(type: EntityType) {
 function destroyEntity(entityIdToDelete: number) {
   if (state.baseEntities.len == 0) return;
 
-  const baseIdToDelete = state.idToBaseLookup[entityIdToDelete];
+  const baseIdxToDelete = state.idToBaseLookup[entityIdToDelete];
   const baseLast = state.baseEntities.len - 1;
 
-  const typeIdToDelete = state.baseEntities.data.typeId[baseIdToDelete];
-  const typeIdOfLastE = state.baseEntities.data.typeId[baseLast];
+  const typeIdxToDelete = state.baseEntities.data.typeIdx[baseIdxToDelete];
+  const typeIdxOfLastE = state.baseEntities.data.typeIdx[baseLast];
   const entityIdLast = state.baseEntities.data.entityId[baseLast];
 
   const typeTableForEntityToDelete = getTableFromKind(
-    state.baseEntities.data.type[baseIdToDelete]
+    state.baseEntities.data.type[baseIdxToDelete]
   );
   const typeTableForLastEntity = getTableFromKind(
     state.baseEntities.data.type[baseLast]
@@ -265,19 +273,19 @@ function destroyEntity(entityIdToDelete: number) {
 
   const typeLast = typeTableForEntityToDelete.len - 1;
 
-  swapDelete(baseIdToDelete, state.baseEntities);
+  swapDelete(baseIdxToDelete, state.baseEntities);
 
-  if (baseIdToDelete != baseLast) {
-    state.idToBaseLookup[entityIdLast] = baseIdToDelete;
-    typeTableForLastEntity.data.baseId[typeIdOfLastE] = baseIdToDelete;
+  if (baseIdxToDelete != baseLast) {
+    state.idToBaseLookup[entityIdLast] = baseIdxToDelete;
+    typeTableForLastEntity.data.baseIdx[typeIdxOfLastE] = baseIdxToDelete;
   }
 
-  swapDelete(typeIdToDelete, typeTableForEntityToDelete);
+  swapDelete(typeIdxToDelete, typeTableForEntityToDelete);
 
-  if (typeIdToDelete != typeLast) {
-    const baseIdOfLastType =
-      typeTableForEntityToDelete.data.baseId[typeIdToDelete];
-    state.baseEntities.data.typeId[baseIdOfLastType] = typeIdToDelete;
+  if (typeIdxToDelete != typeLast) {
+    const baseIdxOfLastType =
+      typeTableForEntityToDelete.data.baseIdx[typeIdxToDelete];
+    state.baseEntities.data.typeIdx[baseIdxOfLastType] = typeIdxToDelete;
   }
 }
 

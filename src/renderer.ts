@@ -290,10 +290,10 @@ export function emitTrailVertices(device: GPUDevice) {
         pnx = state.trailPoints.data.x[tpIndexNext];
         pny = state.trailPoints.data.y[tpIndexNext];
       } else {
-        const oId = state.trails.data.ownerId[i];
-        const baseId = state.idToBaseLookup[oId];
-        pnx = state.baseEntities.data.x[baseId];
-        pny = state.baseEntities.data.y[baseId];
+        const ownerId = state.trails.data.ownerId[i];
+        const baseIdx = state.idToBaseLookup[ownerId];
+        pnx = state.baseEntities.data.x[baseIdx];
+        pny = state.baseEntities.data.y[baseIdx];
       }
 
       const dirX = pnx - px;
