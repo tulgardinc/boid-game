@@ -43,6 +43,9 @@ export function renderTexturedQuads(device: GPUDevice) {
   for (let i = 0; i < state.outerHealthBars.len; i++) {
     quadBaseIdxs.push(state.outerHealthBars.data.baseIdx[i]);
   }
+  for (let i = 0; i < state.transitionHealthBars.len; i++) {
+    quadBaseIdxs.push(state.transitionHealthBars.data.baseIdx[i]);
+  }
   for (let i = 0; i < state.innerHealthBars.len; i++) {
     quadBaseIdxs.push(state.innerHealthBars.data.baseIdx[i]);
   }

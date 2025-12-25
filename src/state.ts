@@ -24,6 +24,7 @@ export enum EntityType {
   Asteroid,
   Boid,
   HealthBarOuter,
+  HealthBarTransition,
   HealthBarInnner,
 }
 
@@ -72,12 +73,17 @@ export type Boid = {
 export type OuterHealthBar = {
   baseIdx: number;
   targetEntityId: number;
+  innerEntityId: number;
+  transitionEntityId: number;
+  targetWidth: number;
+};
+
+export type TransitionHealthBar = {
+  baseIdx: number;
 };
 
 export type InnerHealthBar = {
   baseIdx: number;
-  outerEntityId: number;
-  targetWidth: number;
 };
 
 export type HurtCooldown = {
@@ -142,11 +148,15 @@ export const state = {
   outerHealthBars: makeSoA<OuterHealthBar>(100, {
     targetEntityId: 0,
     baseIdx: 0,
+    innerEntityId: 0,
+    transitionEntityId: 0,
+    targetWidth: 0,
+  }),
+  transitionHealthBars: makeSoA<TransitionHealthBar>(100, {
+    baseIdx: 0,
   }),
   innerHealthBars: makeSoA<InnerHealthBar>(100, {
-    outerEntityId: 0,
     baseIdx: 0,
-    targetWidth: 0,
   }),
   cantHurtSet: new Set<string>(),
   hurtCooldowns: makeSoA<HurtCooldown>(100, {
@@ -159,7 +169,8 @@ export const state = {
     asteroid: { r: 1, g: 0, b: 0.2 },
     asteroidHurt: { r: 1, g: 1, b: 1 },
     outerHelthBar: { r: 0.1, g: 0.1, b: 0.1 },
-    innerHelthhBar: { r: 0, g: 1, b: 0.1 },
+    transitionHealthBar: { r: 1, g: 1, b: 1 },
+    innerHelthhBar: { r: 0.9, g: 0, b: 0 },
   },
   collisions: new Array<Collision>(),
   prevCollisions: new Set<string>(),
@@ -266,6 +277,8 @@ function getTableFromKind(type: EntityType) {
       return state.innerHealthBars;
     case EntityType.HealthBarOuter:
       return state.outerHealthBars;
+    case EntityType.HealthBarTransition:
+      return state.transitionHealthBars;
   }
 }
 
