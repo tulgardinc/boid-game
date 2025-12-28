@@ -3,6 +3,7 @@ import {
   ASTEROID_HIT_SCALE,
   ASTEROID_SHRINK_DURATION,
   ASTEROID_STOP_DURATION,
+  spawnAsteroidDeathParticles,
 } from "./asteroid";
 import { BOID_DAMAGE } from "./boid";
 import { appendSoA, swapDeleteSoA } from "./SoA";

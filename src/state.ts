@@ -92,6 +92,31 @@ export type HurtCooldown = {
   expiry: number;
 };
 
+export type ParticleEmitter = {
+  count: number;
+  lifeTime: number;
+  posMinX: number;
+  posMinY: number;
+  posMaxX: number;
+  posMaxY: number;
+  velMinX: number;
+  velMinY: number;
+  velMaxX: number;
+  velMaxY: number;
+  scaleInitX: number;
+  scaleInitY: number;
+  scaleFinalX: number;
+  scaleFinalY: number;
+  colorInitR: number;
+  colorInitG: number;
+  colorInitB: number;
+  colorInitA: number;
+  colorFinalR: number;
+  colorFinalG: number;
+  colorFinalB: number;
+  colorFinalA: number;
+};
+
 export const MAX_TRAIL_LENGTH = 50;
 
 export const state = {
@@ -163,6 +188,30 @@ export const state = {
     asteroidId: 0,
     boidId: 0,
     expiry: 0,
+  }),
+  particleEmitters: makeSoA<ParticleEmitter>(100, {
+    count: 0,
+    lifeTime: 0,
+    posMaxX: 0,
+    posMaxY: 0,
+    posMinX: 0,
+    posMinY: 0,
+    velMaxX: 0,
+    velMaxY: 0,
+    velMinX: 0,
+    velMinY: 0,
+    scaleInitX: 0,
+    scaleInitY: 0,
+    scaleFinalX: 0,
+    scaleFinalY: 0,
+    colorInitR: 0,
+    colorInitG: 0,
+    colorInitB: 0,
+    colorInitA: 0,
+    colorFinalR: 0,
+    colorFinalG: 0,
+    colorFinalB: 0,
+    colorFinalA: 0,
   }),
   colors: {
     boid: { r: 1, g: 1, b: 1 },

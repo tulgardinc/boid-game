@@ -80,8 +80,37 @@ function createAsteroid() {
   createHealthBar({ x: spawnX, y: spawnY }, entityId);
 }
 
+export function spawnAsteroidDeathParticles(x: number, y: number) {
+  const VEL = 250;
+  appendSoA(state.particleEmitters, {
+    count: 20,
+    lifeTime: 1.5,
+    posMinX: x,
+    posMinY: y,
+    posMaxX: x,
+    posMaxY: y,
+    velMinX: -VEL,
+    velMinY: -VEL,
+    velMaxX: VEL,
+    velMaxY: VEL,
+    scaleInitX: 40,
+    scaleInitY: 40,
+    scaleFinalX: 5,
+    scaleFinalY: 5,
+    colorInitR: 1,
+    colorInitG: 0,
+    colorInitB: 0,
+    colorInitA: 0.8,
+    colorFinalR: 0.4,
+    colorFinalG: 0,
+    colorFinalB: 1,
+    colorFinalA: 0,
+  });
+}
+
 export function asteroidUpdate() {
   const ad = state.asteroids.data;
+  const d = state.baseEntities.data;
 
   if (state.time.now >= state.nextAsteroidSpawn) {
     createAsteroid();
@@ -91,7 +120,8 @@ export function asteroidUpdate() {
   for (let i = 0; i < state.asteroids.len; i++) {
     const baseIdx = state.asteroids.data.baseIdx[i];
     if (ad.health[i] <= 0) {
-      scheduleForDelete(state.baseEntities.data.entityId[baseIdx]);
+      spawnAsteroidDeathParticles(d.x[baseIdx], d.y[baseIdx]);
+      scheduleForDelete(d.entityId[baseIdx]);
       continue;
     }
 

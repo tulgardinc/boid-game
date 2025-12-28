@@ -22,8 +22,8 @@ importers:
         specifier: ^24.9.1
         version: 24.9.1
       '@webgpu/types':
-        specifier: ^0.1.66
-        version: 0.1.66
+        specifier: ^0.1.68
+        version: 0.1.68
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
@@ -616,8 +616,8 @@ packages:
     resolution: {integrity: sha512-tUFMXI4gxzzMXt4xpGJEsBsTox0XbNQ1y94EwlD/CuZwFcQP79xfQqMhau9HsRc/J0cAPA/HZt1dZPtGn9V/7w==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@webgpu/types@0.1.66':
-    resolution: {integrity: sha512-YA2hLrwLpDsRueNDXIMqN9NTzD6bCDkuXbOSe0heS+f8YE8usA6Gbv1prj81pzVHrbaAma7zObnIC+I6/sXJgA==}
+  '@webgpu/types@0.1.68':
+    resolution: {integrity: sha512-3ab1B59Ojb6RwjOspYLsTpCzbNB3ZaamIAxBMmvnNkiDoLTZUOBXZ9p5nAYVEkQlDdf6qAZWi1pqj9+ypiqznA==}
 
   '@xmldom/xmldom@0.8.11':
     resolution: {integrity: sha512-cQzWCtO6C8TQiYl1ruKNn2U6Ao4o4WBBcbL61yJl84x+j5sOWWFU9X7DpND8XZG3daDppSsigMdfAIl2upQBRw==}
@@ -2752,7 +2752,7 @@ snapshots:
       '@typescript-eslint/types': 8.46.2
       eslint-visitor-keys: 4.2.1
 
-  '@webgpu/types@0.1.66': {}
+  '@webgpu/types@0.1.68': {}
 
   '@xmldom/xmldom@0.8.11': {}
 
@@ -4411,7 +4411,7 @@ snapshots:
 
   webgpu@0.3.8:
     dependencies:
-      '@webgpu/types': 0.1.66
+      '@webgpu/types': 0.1.68
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color

@@ -1,37 +1,85 @@
 import transform2DColorCode from "./shaders/coloredTransform.wgsl?raw";
 import trailCode from "./shaders/trail.wgsl?raw";
+import particleComputeCode from "./shaders/particleCompute.wgsl?raw";
+import particleRenderCode from "./shaders/particleRender.wgsl?raw";
 import { getBoidIndexBufer, getBoidVertexBuffer } from "./meshes/boid";
 import { getQuadVertexBuffer, getQuadIndexBuffer } from "./meshes/quad";
-import { get2DTransformPipeline, getTrailPipeline } from "./pipelines";
-import { getAbsoluteTPIndex, MAX_TRAIL_LENGTH, state } from "./state";
-import { getCameraBindGroup, getCameraBindGroupLayout } from "./uniforms";
-import { dir } from "console";
+import {
+  get2DTransformPipeline,
+  getParticleDrawListPipeline,
+  getParticleRenderPipeline,
+  getParticleSpawnPipeline,
+  getParticleStatePipeline,
+  getTrailPipeline,
+} from "./pipelines";
+import { MAX_TRAIL_LENGTH, state } from "./state";
+import {
+  getCameraBindGroup,
+  getCameraBindGroupLayout,
+  getParticleComputeBindGroup,
+  getParticleComputeBindGroupLayout,
+  getParticleRenderBindGroup,
+  getParticleRenderBindGroupLayout,
+} from "./uniforms";
 
 export type Renderer = {
   instanceCount: number;
   instanceOffset: number;
-  dynamicVertBuffer: GPUBuffer;
-  dynamicIndexBuffer: GPUBuffer;
+  trailVertexBuffer: GPUBuffer;
+  trailInstanceBuffer: GPUBuffer;
   instanceBuffer: GPUBuffer;
+  particleDrawListBuffer: GPUBuffer;
+  particleDrawCountBuffer: GPUBuffer;
+  particleStateBufferA: GPUBuffer;
+  particleStateBufferB: GPUBuffer;
+  particleParametersBuffer: GPUBuffer;
+  particleEmitterBuffer: GPUBuffer;
+  particleRingCursorBuffer: GPUBuffer;
+  particleShouldUseAB: boolean;
   shaders: {
     coloredTransform: GPUShaderModule;
     trail: GPUShaderModule;
+    particleCompute: GPUShaderModule;
+    particleRender: GPUShaderModule;
   };
   meshes: {
     quad: Mesh;
     boid: Mesh;
   };
-  piplines: {
+  renderPipelines: {
     transform2D: GPURenderPipeline;
     trail: GPURenderPipeline;
+    particleRender: GPURenderPipeline;
+  };
+  computePipelines: {
+    particleSpawn: GPUComputePipeline;
+    particleState: GPUComputePipeline;
+    particleDrawList: GPUComputePipeline;
   };
   bindGroups: {
     camera: {
       layout: GPUBindGroupLayout;
       group: GPUBindGroup;
     };
+    particleComputeAB: {
+      layout: GPUBindGroupLayout;
+      group: GPUBindGroup;
+    };
+    particleComputeBA: {
+      layout: GPUBindGroupLayout;
+      group: GPUBindGroup;
+    };
+    particleRenderA: {
+      layout: GPUBindGroupLayout;
+      group: GPUBindGroup;
+    };
+    particleRenderB: {
+      layout: GPUBindGroupLayout;
+      group: GPUBindGroup;
+    };
   };
   renderQueue: (RenderCommandMesh | RenderCommandVFX)[];
+  frameNo: number;
 };
 
 export let renderer!: Renderer;
@@ -108,7 +156,7 @@ function initInstanceBuffer(device: GPUDevice) {
   });
 }
 
-function initDynVertexBuffer(device: GPUDevice) {
+function initTrailVertexBuffer(device: GPUDevice) {
   // float32
   return device.createBuffer({
     size: 6 * 4 * 2 * MAX_TRAIL_LENGTH * 300,
@@ -116,12 +164,117 @@ function initDynVertexBuffer(device: GPUDevice) {
   });
 }
 
-function initDynIndexBuffer(device: GPUDevice) {
+function initTrailIndexBuffer(device: GPUDevice) {
   // uint16
   return device.createBuffer({
     size: 2 * 2 * MAX_TRAIL_LENGTH * 300,
     usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
   });
+}
+
+export const MAX_PARTICLE_COUNT = 10000;
+
+function initParticleDrawListBuffer(device: GPUDevice) {
+  // uint32
+  const data = new Uint32Array(MAX_PARTICLE_COUNT);
+  data.fill(0);
+  const buffer = device.createBuffer({
+    size: 4 * MAX_PARTICLE_COUNT,
+    usage:
+      GPUBufferUsage.STORAGE |
+      GPUBufferUsage.COPY_SRC |
+      GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(buffer, 0, data);
+  return buffer;
+}
+
+function initPartcileStateBuffer(device: GPUDevice) {
+  // float32
+  // age 1
+  // deathAge 1
+  // pos 2
+  // vel 2
+  // scale 2
+  // finalScale 2
+  // color 4
+  // finalColor 4
+  const data = new Float32Array(18 * MAX_PARTICLE_COUNT);
+  data.fill(0);
+  const buffer = device.createBuffer({
+    size: 4 * 18 * MAX_PARTICLE_COUNT,
+    usage:
+      GPUBufferUsage.STORAGE |
+      GPUBufferUsage.COPY_SRC |
+      GPUBufferUsage.COPY_DST,
+  });
+
+  device.queue.writeBuffer(buffer, 0, data);
+  return buffer;
+}
+
+function initParticleDrawCountBuffer(device: GPUDevice) {
+  // uint32
+  const data = new Uint32Array(1);
+  data.fill(0);
+  const buffer = device.createBuffer({
+    size: 4,
+    usage:
+      GPUBufferUsage.STORAGE |
+      GPUBufferUsage.COPY_SRC |
+      GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(buffer, 0, data);
+  return buffer;
+}
+
+function initParticleParametersBuffer(device: GPUDevice) {
+  // particleCount: uint32
+  // deltaTime: float32
+  const data = new Float32Array(5);
+  data.fill(0);
+  const buffer = device.createBuffer({
+    size: 5 * 4,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(buffer, 0, data);
+  return buffer;
+}
+
+function initParticleEmitterBuffer(device: GPUDevice) {
+  // uint32
+  // base 1
+  // count 1
+  // float32
+  // lifetime 1
+  // padding 1
+  // minPos 2
+  // maxPos 2
+  // minVel 2
+  // maxVel 2
+  // initScale 2
+  // finalScale 2
+  // initColor 4
+  // finalColor 4
+  return device.createBuffer({
+    size: 24 * 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
+  });
+}
+
+function initParticleRingCursorBuffer(device: GPUDevice) {
+  // index: uint32
+  const data = new Uint32Array(1);
+  data.fill(0);
+  const buffer = device.createBuffer({
+    size: 4,
+    usage:
+      GPUBufferUsage.STORAGE |
+      GPUBufferUsage.COPY_SRC |
+      GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(buffer, 0, data);
+  return buffer;
 }
 
 export type Mesh = {
@@ -135,24 +288,96 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
   const camLayout = getCameraBindGroupLayout(device);
   const camGroup = getCameraBindGroup(device, camLayout);
 
+  const particleDrawListBuffer = initParticleDrawListBuffer(device);
+  const particleDrawCountBuffer = initParticleDrawCountBuffer(device);
+  const particleStateBufferA = initPartcileStateBuffer(device);
+  const particleStateBufferB = initPartcileStateBuffer(device);
+  const particleParametersBuffer = initParticleParametersBuffer(device);
+  const particleEmitterBuffer = initParticleEmitterBuffer(device);
+  const particleRingCursorBuffer = initParticleRingCursorBuffer(device);
+
+  const particleComputeLayout = getParticleComputeBindGroupLayout(device);
+  const particleComputeGAB = getParticleComputeBindGroup(
+    device,
+    particleComputeLayout,
+    particleDrawListBuffer,
+    particleDrawCountBuffer,
+    particleStateBufferA,
+    particleStateBufferB,
+    particleParametersBuffer,
+    particleEmitterBuffer,
+    particleRingCursorBuffer
+  );
+  const particleComputeGBA = getParticleComputeBindGroup(
+    device,
+    particleComputeLayout,
+    particleDrawListBuffer,
+    particleDrawCountBuffer,
+    particleStateBufferB,
+    particleStateBufferA,
+    particleParametersBuffer,
+    particleEmitterBuffer,
+    particleRingCursorBuffer
+  );
+
+  const particleRenderLayout = getParticleRenderBindGroupLayout(device);
+  const particleRenderBGA = getParticleRenderBindGroup(
+    device,
+    particleRenderLayout,
+    particleDrawListBuffer,
+    particleStateBufferA
+  );
+  const particleRenderBGB = getParticleRenderBindGroup(
+    device,
+    particleRenderLayout,
+    particleDrawListBuffer,
+    particleStateBufferB
+  );
+
   const bindGroups: Renderer["bindGroups"] = {
     camera: {
       layout: camLayout,
       group: camGroup,
+    },
+    particleComputeAB: {
+      layout: particleComputeLayout,
+      group: particleComputeGAB,
+    },
+    particleComputeBA: {
+      layout: particleComputeLayout,
+      group: particleComputeGBA,
+    },
+    particleRenderA: {
+      layout: particleRenderLayout,
+      group: particleRenderBGA,
+    },
+    particleRenderB: {
+      layout: particleRenderLayout,
+      group: particleRenderBGB,
     },
   };
 
   const shaders: Renderer["shaders"] = {
     coloredTransform: getShaderPos2DRed(device),
     trail: getShaderTrail(device),
+    particleCompute: getShaderParticleCompute(device),
+    particleRender: getShaderParticleRender(device),
   };
 
   renderer = {
     instanceCount: 0,
     instanceOffset: 0,
-    dynamicVertBuffer: initDynVertexBuffer(device),
-    dynamicIndexBuffer: initDynIndexBuffer(device),
+    trailVertexBuffer: initTrailVertexBuffer(device),
+    trailInstanceBuffer: initTrailIndexBuffer(device),
     instanceBuffer: initInstanceBuffer(device),
+    particleDrawListBuffer,
+    particleDrawCountBuffer,
+    particleStateBufferA,
+    particleStateBufferB,
+    particleParametersBuffer,
+    particleEmitterBuffer,
+    particleRingCursorBuffer,
+    particleShouldUseAB: false,
     meshes: {
       quad: {
         vertexBuffer: getQuadVertexBuffer(device),
@@ -167,7 +392,7 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
         instanceBufferLayoutId: "transform2D",
       },
     },
-    piplines: {
+    renderPipelines: {
       transform2D: get2DTransformPipeline(
         device,
         format,
@@ -183,16 +408,32 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
         shaders,
         vertexBufferLayouts
       ),
+      particleRender: getParticleRenderPipeline(
+        device,
+        format,
+        bindGroups,
+        shaders
+      ),
+    },
+    computePipelines: {
+      particleSpawn: getParticleSpawnPipeline(device, bindGroups, shaders),
+      particleState: getParticleStatePipeline(device, bindGroups, shaders),
+      particleDrawList: getParticleDrawListPipeline(
+        device,
+        bindGroups,
+        shaders
+      ),
     },
     bindGroups,
     shaders,
     renderQueue: [],
+    frameNo: 0,
   };
 }
 
 export type RenderCommandMesh = {
   kind: "mesh";
-  pipeline: keyof Renderer["piplines"];
+  pipeline: keyof Renderer["renderPipelines"];
   mesh: keyof Renderer["meshes"];
   bindGroup: keyof Renderer["bindGroups"];
   instanceCount: number;
@@ -202,7 +443,7 @@ export type RenderCommandMesh = {
 
 export type RenderCommandVFX = {
   kind: "vfx";
-  pipeline: keyof Renderer["piplines"];
+  pipeline: keyof Renderer["renderPipelines"];
   bindGroup: keyof Renderer["bindGroups"];
   indexCount: number;
   firstIndex: number;
@@ -254,6 +495,20 @@ function getShaderTrail(device: GPUDevice) {
   return device.createShaderModule({
     label: "draw colored objects in 2D",
     code: trailCode,
+  });
+}
+
+function getShaderParticleCompute(device: GPUDevice) {
+  return device.createShaderModule({
+    label: "update particles",
+    code: particleComputeCode,
+  });
+}
+
+function getShaderParticleRender(device: GPUDevice) {
+  return device.createShaderModule({
+    label: "draw particles",
+    code: particleRenderCode,
   });
 }
 
@@ -336,19 +591,82 @@ export function emitTrailVertices(device: GPUDevice) {
     }
   }
 
-  device.queue.writeBuffer(renderer.dynamicVertBuffer, 0, vertices);
-  device.queue.writeBuffer(renderer.dynamicIndexBuffer, 0, indices);
+  device.queue.writeBuffer(renderer.trailVertexBuffer, 0, vertices);
+  device.queue.writeBuffer(renderer.trailInstanceBuffer, 0, indices);
 }
 
 export function renderTrails() {
+  const indexCount =
+    state.trails.data.length.reduce((prev, cur) => prev + cur, 0) * 2 +
+    state.trails.len -
+    1;
+  if (indexCount <= 0) return;
   renderer.renderQueue.push({
     pipeline: "trail",
     bindGroup: "camera",
     kind: "vfx",
     firstIndex: 0,
-    indexCount:
-      state.trails.data.length.reduce((prev, cur) => prev + cur, 0) * 2 +
-      state.trails.len -
-      1,
+    indexCount,
   });
+}
+
+export function setupParticleRendering(device: GPUDevice) {
+  const zeroBuff = new Uint32Array(1);
+  zeroBuff[0] = 0;
+  device.queue.writeBuffer(renderer.particleDrawCountBuffer, 0, zeroBuff);
+
+  const EMITTER_STRIDE = 96;
+  const emitterData = new ArrayBuffer(EMITTER_STRIDE);
+  const dv = new DataView(emitterData);
+
+  const pd = state.particleEmitters.data;
+  let base = 0;
+
+  for (let i = 0; i < state.particleEmitters.len; i++) {
+    const offset = i * EMITTER_STRIDE;
+    dv.setUint32(offset, base, true);
+    dv.setUint32(offset + 4, pd.count[i], true);
+    dv.setFloat32(offset + 8, pd.lifeTime[i], true);
+    dv.setFloat32(offset + 12, 0, true);
+    dv.setFloat32(offset + 16, pd.posMinX[i], true);
+    dv.setFloat32(offset + 20, pd.posMinY[i], true);
+    dv.setFloat32(offset + 24, pd.posMaxX[i], true);
+    dv.setFloat32(offset + 28, pd.posMaxY[i], true);
+    dv.setFloat32(offset + 32, pd.velMinX[i], true);
+    dv.setFloat32(offset + 36, pd.velMinY[i], true);
+    dv.setFloat32(offset + 40, pd.velMaxX[i], true);
+    dv.setFloat32(offset + 44, pd.velMaxY[i], true);
+    dv.setFloat32(offset + 48, pd.scaleInitX[i], true);
+    dv.setFloat32(offset + 52, pd.scaleInitY[i], true);
+    dv.setFloat32(offset + 56, pd.scaleFinalX[i], true);
+    dv.setFloat32(offset + 60, pd.scaleFinalY[i], true);
+    dv.setFloat32(offset + 64, pd.colorInitR[i], true);
+    dv.setFloat32(offset + 68, pd.colorInitG[i], true);
+    dv.setFloat32(offset + 72, pd.colorInitB[i], true);
+    dv.setFloat32(offset + 76, pd.colorInitA[i], true);
+    dv.setFloat32(offset + 80, pd.colorFinalR[i], true);
+    dv.setFloat32(offset + 84, pd.colorFinalG[i], true);
+    dv.setFloat32(offset + 88, pd.colorFinalB[i], true);
+    dv.setFloat32(offset + 92, pd.colorFinalA[i], true);
+
+    base += pd.count[i];
+  }
+
+  device.queue.writeBuffer(renderer.particleEmitterBuffer, 0, emitterData);
+
+  const paramsBuffer = new ArrayBuffer(20);
+  const paramDv = new DataView(paramsBuffer);
+
+  const newParticleCount = state.particleEmitters.data.count.reduce(
+    (sum, v) => sum + v,
+    0
+  );
+
+  paramDv.setUint32(0, MAX_PARTICLE_COUNT, true);
+  paramDv.setUint32(4, state.particleEmitters.len, true);
+  paramDv.setUint32(8, newParticleCount, true);
+  paramDv.setUint32(12, Math.floor(state.time.now % 10000), true);
+  paramDv.setFloat32(16, state.time.deltaTime, true);
+
+  device.queue.writeBuffer(renderer.particleParametersBuffer, 0, paramsBuffer);
 }

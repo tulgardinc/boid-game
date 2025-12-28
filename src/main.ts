@@ -2,14 +2,17 @@ import {
   initializeState,
   updateGameTime,
   deleteScheduledEntities,
+  state,
 } from "./state";
 import "./style.css";
 import { asteroidUpdate } from "./asteroid";
 import {
   emitTrailVertices,
   initRenderer,
+  MAX_PARTICLE_COUNT,
   renderer,
   renderTrails,
+  setupParticleRendering,
 } from "./renderer";
 import { renderBoids } from "./meshes/boid";
 import { renderTexturedQuads } from "./meshes/quad";
@@ -45,7 +48,11 @@ async function main() {
   initializeState();
   initRenderer(device, presentationFormat);
 
-  const renderPassDescriptor = {
+  const computePassDescriptor: GPUComputePassDescriptor = {
+    label: "compute pass",
+  };
+
+  const renderPassDescriptor: GPURenderPassDescriptor = {
     label: "basic canvas render pass",
     colorAttachments: [
       {
@@ -55,6 +62,18 @@ async function main() {
         storeOp: "store",
       },
     ],
+    depthStencilAttachment: {
+      view: device
+        .createTexture({
+          size: [2310, 1790],
+          format: "depth24plus",
+          usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        })
+        .createView(),
+      depthLoadOp: "clear",
+      depthStoreOp: "store",
+      depthClearValue: 1.0,
+    },
   };
 
   function render() {
@@ -76,6 +95,9 @@ async function main() {
     updateBoidTrails();
     emitTrailVertices(device);
 
+    // send particle data
+    setupParticleRendering(device);
+
     // collision check
     detectCollisions();
 
@@ -92,22 +114,59 @@ async function main() {
     )[0].view = context.getCurrentTexture().createView();
     const encoder = device.createCommandEncoder({ label: "encoder" });
 
-    const pass = encoder.beginRenderPass(
-      renderPassDescriptor as GPURenderPassDescriptor
+    // compute pass
+    const particleComputeBG = renderer.particleShouldUseAB
+      ? renderer.bindGroups.particleComputeAB.group
+      : renderer.bindGroups.particleComputeBA.group;
+
+    const particleRenderBG = renderer.particleShouldUseAB
+      ? renderer.bindGroups.particleRenderA.group
+      : renderer.bindGroups.particleRenderB.group;
+
+    const computePass = encoder.beginComputePass(computePassDescriptor);
+
+    const totalParticlesToSpawn = state.particleEmitters.data.count.reduce(
+      (sum, v) => sum + v,
+      0
     );
+
+    computePass.setPipeline(renderer.computePipelines.particleSpawn);
+    computePass.setBindGroup(0, particleComputeBG);
+    const wgSpawnCount = Math.ceil(totalParticlesToSpawn / 256);
+    computePass.dispatchWorkgroups(wgSpawnCount, 1, 1);
+
+    computePass.setPipeline(renderer.computePipelines.particleState);
+    computePass.setBindGroup(0, particleComputeBG);
+    const wgUpdateCount = Math.ceil(MAX_PARTICLE_COUNT / 256);
+    computePass.dispatchWorkgroups(wgUpdateCount, 1, 1);
+
+    computePass.setPipeline(renderer.computePipelines.particleDrawList);
+    computePass.setBindGroup(0, particleComputeBG);
+    computePass.dispatchWorkgroups(wgUpdateCount, 1, 1);
+
+    computePass.end();
+
+    // render pass
+    const renderPass = encoder.beginRenderPass(renderPassDescriptor);
 
     for (const command of renderer.renderQueue) {
       switch (command.kind) {
         case "mesh":
-          pass.setPipeline(renderer.piplines[command.pipeline]);
-          pass.setBindGroup(0, renderer.bindGroups[command.bindGroup].group);
-          pass.setVertexBuffer(0, renderer.meshes[command.mesh].vertexBuffer);
-          pass.setIndexBuffer(
+          renderPass.setPipeline(renderer.renderPipelines[command.pipeline]);
+          renderPass.setBindGroup(
+            0,
+            renderer.bindGroups[command.bindGroup].group
+          );
+          renderPass.setVertexBuffer(
+            0,
+            renderer.meshes[command.mesh].vertexBuffer
+          );
+          renderPass.setIndexBuffer(
             renderer.meshes[command.mesh].indexBuffer,
             "uint16"
           );
-          pass.setVertexBuffer(1, renderer.instanceBuffer);
-          pass.drawIndexed(
+          renderPass.setVertexBuffer(1, renderer.instanceBuffer);
+          renderPass.drawIndexed(
             command.indexCount,
             command.instanceCount,
             0,
@@ -116,22 +175,36 @@ async function main() {
           );
           break;
         case "vfx":
-          pass.setPipeline(renderer.piplines[command.pipeline]);
-          pass.setBindGroup(0, renderer.bindGroups[command.bindGroup].group);
-          pass.setVertexBuffer(0, renderer.dynamicVertBuffer);
-          pass.setIndexBuffer(renderer.dynamicIndexBuffer, "uint16");
-          pass.drawIndexed(command.indexCount, 1, 0, 0);
+          renderPass.setPipeline(renderer.renderPipelines[command.pipeline]);
+          renderPass.setBindGroup(
+            0,
+            renderer.bindGroups[command.bindGroup].group
+          );
+          renderPass.setVertexBuffer(0, renderer.trailVertexBuffer);
+          renderPass.setIndexBuffer(renderer.trailInstanceBuffer, "uint16");
+          renderPass.drawIndexed(command.indexCount, 1, 0, 0);
           break;
       }
     }
 
-    pass.end();
+    // Render particles
+    renderPass.setPipeline(renderer.renderPipelines.particleRender);
+    renderPass.setBindGroup(0, particleRenderBG);
+    renderPass.setBindGroup(1, renderer.bindGroups.camera.group);
+    const VERRICES_PER_PARTICLE = 6;
+    renderPass.draw(MAX_PARTICLE_COUNT * VERRICES_PER_PARTICLE);
+
+    renderPass.end();
 
     const commandBuffer = encoder.finish();
 
     renderer.instanceOffset = 0;
     renderer.instanceCount = 0;
     renderer.renderQueue.length = 0;
+
+    renderer.particleShouldUseAB = !renderer.particleShouldUseAB;
+    renderer.frameNo++;
+    state.particleEmitters.len = 0;
 
     device.pushErrorScope("validation");
     device.queue.submit([commandBuffer]);

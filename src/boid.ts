@@ -182,17 +182,15 @@ export function boidInit() {
   createBoid({ x: 200, y: 0 });
   createBoid({ x: -200, y: 0 });
   createBoid({ x: 300, y: 0 });
-  // createBoid({ x: -300, y: 0 });
-  // createBoid({ x: 400, y: 0 });
-  // createBoid({ x: -400, y: 0 });
-
+  createBoid({ x: -300, y: 0 });
+  createBoid({ x: 400, y: 0 });
+  createBoid({ x: -400, y: 0 });
   // createBoid({ x: 200, y: 100 });
   // createBoid({ x: -200, y: 100 });
   // createBoid({ x: 300, y: 100 });
   // createBoid({ x: -300, y: 100 });
   // createBoid({ x: 400, y: 100 });
   // createBoid({ x: -400, y: 100 });
-
   // createBoid({ x: 200, y: -100 });
   // createBoid({ x: -200, y: -100 });
   // createBoid({ x: 300, y: -100 });

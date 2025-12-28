@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.9.1",
-    "@webgpu/types": "^0.1.66",
+    "@webgpu/types": "^0.1.68",
     "concurrently": "^9.2.1",
     "electron": "^38.4.0",
     "electron-builder": "^26.0.12",
