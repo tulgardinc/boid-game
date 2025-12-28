@@ -101,7 +101,7 @@ export function spawnAsteroidDeathParticles(x: number, y: number) {
     colorInitG: 0,
     colorInitB: 0,
     colorInitA: 0.8,
-    colorFinalR: 0.4,
+    colorFinalR: 0.6,
     colorFinalG: 0,
     colorFinalB: 1,
     colorFinalA: 0,

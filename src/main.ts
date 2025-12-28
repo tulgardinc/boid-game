@@ -48,6 +48,12 @@ async function main() {
   initializeState();
   initRenderer(device, presentationFormat);
 
+  let depthTexture = device.createTexture({
+    size: [canvas.width, canvas.height],
+    format: "depth24plus",
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
   const computePassDescriptor: GPUComputePassDescriptor = {
     label: "compute pass",
   };
@@ -63,13 +69,7 @@ async function main() {
       },
     ],
     depthStencilAttachment: {
-      view: device
-        .createTexture({
-          size: [2310, 1790],
-          format: "depth24plus",
-          usage: GPUTextureUsage.RENDER_ATTACHMENT,
-        })
-        .createView(),
+      view: depthTexture.createView(),
       depthLoadOp: "clear",
       depthStoreOp: "store",
       depthClearValue: 1.0,
@@ -230,6 +230,16 @@ async function main() {
       format: navigator.gpu.getPreferredCanvasFormat(),
       alphaMode: "premultiplied",
     });
+
+    depthTexture.destroy();
+    depthTexture = device.createTexture({
+      size: [canvas.width, canvas.height],
+      format: "depth24plus",
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    (
+      renderPassDescriptor.depthStencilAttachment as GPURenderPassDepthStencilAttachment
+    ).view = depthTexture.createView();
   }
 
   window.addEventListener("resize", configureContext);
