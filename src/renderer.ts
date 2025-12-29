@@ -257,7 +257,7 @@ function initParticleEmitterBuffer(device: GPUDevice) {
   // initColor 4
   // finalColor 4
   return device.createBuffer({
-    size: 24 * 4,
+    size: 24 * 4 * 500,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
   });
 }
@@ -616,7 +616,7 @@ export function setupParticleRendering(device: GPUDevice) {
   device.queue.writeBuffer(renderer.particleDrawCountBuffer, 0, zeroBuff);
 
   const EMITTER_STRIDE = 96;
-  const emitterData = new ArrayBuffer(EMITTER_STRIDE);
+  const emitterData = new ArrayBuffer(EMITTER_STRIDE * 500);
   const dv = new DataView(emitterData);
 
   const pd = state.particleEmitters.data;

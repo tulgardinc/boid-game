@@ -10,7 +10,7 @@ const TRANSITION_HALFLIFE = 0.08;
 export function createHealthBar(
   pos: { x: number; y: number },
   asteroidEntityId: number
-) {
+): number {
   const { baseIdx: innerBaseIdx, entityId: innerEntityId } = addBaseEntity({
     type: EntityType.HealthBarInnner,
 
@@ -108,6 +108,9 @@ export function createHealthBar(
   });
 
   state.baseEntities.data.typeIdx[outerBaseIdx] = outerTypeIdx;
+
+  const outerEntityId = state.baseEntities.data.entityId[outerBaseIdx];
+  return outerEntityId;
 }
 
 export function updateHealthBars() {
@@ -116,7 +119,6 @@ export function updateHealthBars() {
 
   for (let outIdx = 0; outIdx < state.outerHealthBars.len; outIdx++) {
     const outBaseIdx = outD.baseIdx[outIdx];
-    const outEntityId = d.entityId[outBaseIdx];
 
     const inEntityId = outD.innerEntityId[outIdx];
     const inBaseIdx = state.idToBaseLookup[inEntityId];
@@ -130,9 +132,6 @@ export function updateHealthBars() {
     const health = state.asteroids.data.health[astIdx];
 
     if (health <= 0) {
-      scheduleForDelete(outEntityId);
-      scheduleForDelete(trEntityId);
-      scheduleForDelete(inEntityId);
       continue;
     }
 

@@ -64,6 +64,7 @@ export type Asteroid = {
   defaultScale: number;
   defaultVelX: number;
   defaultVelY: number;
+  outerHealthBarEntityId: number;
 };
 
 export type Boid = {
@@ -166,6 +167,7 @@ export const state = {
     defaultVelX: 0,
     defaultVelY: 0,
     stopExpiry: null,
+    outerHealthBarEntityId: 0,
   }),
   boids: makeSoA<Boid>(100, {
     baseIdx: 0,

@@ -9,35 +9,35 @@ export const ASTEROID_DAMAGE_COLOR_DURATION = 0.15;
 export const ASTEROID_STOP_DURATION = 0.12;
 export const ASTEROID_HEALTH = 100;
 
+const MAX_SCALE = 250;
+const MIN_SCALE = 150;
+
+const MAX_SPEED = 120;
+const MIN_SPEED = 100;
+
 function randomStep() {
   return Math.random() > 0.5 ? 1 : -1;
 }
 function createAsteroid() {
-  const maxScale = 250;
-  const minScale = 150;
-
-  const maxSpeed = 120;
-  const minSpeed = 100;
-
   let spawnX;
   let spawnY;
 
   if (randomStep() == 1) {
-    spawnX = randomStep() * (1920 / 2 + maxScale);
-    spawnY = randomStep() * (Math.random() - 0.5) * (1080 + maxScale * 2);
+    spawnX = randomStep() * (1920 / 2 + MAX_SCALE);
+    spawnY = randomStep() * (Math.random() - 0.5) * (1080 + MAX_SCALE * 2);
   } else {
-    spawnX = randomStep() * (Math.random() - 0.5) * (1920 + maxScale * 2);
-    spawnY = randomStep() * (1080 / 2 + maxScale);
+    spawnX = randomStep() * (Math.random() - 0.5) * (1920 + MAX_SCALE * 2);
+    spawnY = randomStep() * (1080 / 2 + MAX_SCALE);
   }
 
-  const scale = Math.random() * (maxScale - minScale) + minScale;
+  const scale = Math.random() * (MAX_SCALE - MIN_SCALE) + MIN_SCALE;
 
   const velX =
     -(Math.abs(spawnX) / spawnX) *
-    (Math.random() * (maxSpeed - minSpeed) + minSpeed);
+    (Math.random() * (MAX_SPEED - MIN_SPEED) + MIN_SPEED);
   const velY =
     -(Math.abs(spawnY) / spawnY) *
-    (Math.random() * (maxSpeed - minSpeed) + minSpeed);
+    (Math.random() * (MAX_SPEED - MIN_SPEED) + MIN_SPEED);
 
   const { baseIdx, entityId } = addBaseEntity({
     type: EntityType.Asteroid,
@@ -73,18 +73,23 @@ function createAsteroid() {
     defaultVelX: velX,
     defaultVelY: velY,
     stopExpiry: null,
+    outerHealthBarEntityId: 0,
   });
 
   state.baseEntities.data.typeIdx[baseIdx] = typeIdx;
 
-  createHealthBar({ x: spawnX, y: spawnY }, entityId);
+  const outerHealthBarEntityId = createHealthBar(
+    { x: spawnX, y: spawnY },
+    entityId
+  );
+  state.asteroids.data.outerHealthBarEntityId[typeIdx] = outerHealthBarEntityId;
 }
 
 export function spawnAsteroidDeathParticles(x: number, y: number) {
-  const VEL = 250;
+  const VEL = 400;
   appendSoA(state.particleEmitters, {
-    count: 20,
-    lifeTime: 1.5,
+    count: 30,
+    lifeTime: 0.85,
     posMinX: x,
     posMinY: y,
     posMaxX: x,
@@ -100,12 +105,23 @@ export function spawnAsteroidDeathParticles(x: number, y: number) {
     colorInitR: 1,
     colorInitG: 0,
     colorInitB: 0,
-    colorInitA: 0.8,
-    colorFinalR: 0.6,
+    colorInitA: 0.9,
+    colorFinalR: 1,
     colorFinalG: 0,
-    colorFinalB: 1,
+    colorFinalB: 0.8,
     colorFinalA: 0,
   });
+}
+
+function scheduleAsteroidForDelete(astrId: number) {
+  const astrIdx = state.baseEntities.data.typeIdx[state.idToBaseLookup[astrId]];
+  const outerId = state.asteroids.data.outerHealthBarEntityId[astrIdx];
+  const outerIdx =
+    state.baseEntities.data.typeIdx[state.idToBaseLookup[outerId]];
+  scheduleForDelete(state.outerHealthBars.data.innerEntityId[outerIdx]);
+  scheduleForDelete(state.outerHealthBars.data.transitionEntityId[outerIdx]);
+  scheduleForDelete(outerId);
+  scheduleForDelete(astrId);
 }
 
 export function asteroidUpdate() {
@@ -121,7 +137,15 @@ export function asteroidUpdate() {
     const baseIdx = state.asteroids.data.baseIdx[i];
     if (ad.health[i] <= 0) {
       spawnAsteroidDeathParticles(d.x[baseIdx], d.y[baseIdx]);
-      scheduleForDelete(d.entityId[baseIdx]);
+      scheduleAsteroidForDelete(d.entityId[baseIdx]);
+      continue;
+    }
+
+    if (
+      Math.abs(d.x[baseIdx]) > 1920 / 2 + MAX_SCALE ||
+      Math.abs(d.y[baseIdx]) > 1080 / 2 + MAX_SCALE
+    ) {
+      scheduleAsteroidForDelete(d.entityId[baseIdx]);
       continue;
     }
 
