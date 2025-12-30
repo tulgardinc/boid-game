@@ -1,7 +1,7 @@
 import { createHealthBar } from "./healthbar";
 import { appendSoA } from "./SoA";
 import { addBaseEntity, EntityType, scheduleForDelete, state } from "./state";
-import { easeOutCubic, removeHurtCooldown } from "./util";
+import { easeOutCubic, moveTowardsArrive, removeHurtCooldown } from "./util";
 
 export const ASTEROID_HIT_SCALE = 0.85;
 export const ASTEROID_SHRINK_DURATION = 0.15;
@@ -9,6 +9,8 @@ export const ASTEROID_DAMAGE_COLOR_DURATION = 0.1;
 export const ASTEROID_STOP_DURATION = 0.1;
 export const ASTEROID_KNOCKBACK_RECOVERY_DURATION = 0.4;
 export const ASTEROID_HEALTH = 100;
+export const ASTEROID_MAX_VEL_R = 90;
+export const ASTEROID_RETURN_VEL_R_SPEED = 100;
 
 const MAX_SCALE = 250;
 const MIN_SCALE = 150;
@@ -76,7 +78,6 @@ function createAsteroid() {
     defaultVelY: velY,
     stopExpirey: null,
     outerHealthBarEntityId: 0,
-    defaultVelR: velR,
     knockbackVelX: 0,
     knockbackVelY: 0,
     recoverKnockbackTimer: null,
@@ -184,6 +185,19 @@ export function asteroidUpdate() {
       ad.recoverKnockbackTimer[i] = ASTEROID_KNOCKBACK_RECOVERY_DURATION;
       d.velR[baseIdx] = ad.knockbackVelRStore[i] + ad.knockbackVelRDelta[i];
       ad.knockbackVelRDelta[i] = 0;
+    }
+
+    if (
+      ad.stopExpirey[i] == null &&
+      Math.abs(d.velR[baseIdx]) >= ASTEROID_MAX_VEL_R
+    ) {
+      d.velR[baseIdx] = moveTowardsArrive(
+        d.velR[baseIdx],
+        Math.sign(d.velR[baseIdx]) * ASTEROID_MAX_VEL_R,
+        ASTEROID_RETURN_VEL_R_SPEED,
+        ASTEROID_MAX_VEL_R / 4,
+        state.time.deltaTime
+      );
     }
 
     const rt = ad.recoverKnockbackTimer[i];

@@ -9,7 +9,7 @@ import {
 } from "./state";
 import { angleDiff } from "./util";
 
-export const BOID_DAMAGE = 20;
+export const BOID_DAMAGE = 1;
 
 // PID Controller constants
 const ROTATION_KP = 28;

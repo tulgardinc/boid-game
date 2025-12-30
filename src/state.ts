@@ -80,7 +80,6 @@ export type Asteroid = {
   defaultScale: number;
   defaultVelX: number;
   defaultVelY: number;
-  defaultVelR: number;
   outerHealthBarEntityId: number;
 };
 
@@ -185,7 +184,6 @@ export const state = {
     defaultVelY: 0,
     stopExpirey: null,
     outerHealthBarEntityId: 0,
-    defaultVelR: 0,
     knockbackVelX: 0,
     knockbackVelY: 0,
     recoverKnockbackTimer: null,

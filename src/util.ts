@@ -305,3 +305,22 @@ export function expApproach(
   const a = 1 - Math.exp(-k * dt); // 0..1 blend factor, framerate independent
   return current + (target - current) * a;
 }
+
+export function moveTowardsArrive(
+  current: number,
+  target: number,
+  maxSpeed: number,
+  slowRadius: number,
+  dt: number
+) {
+  const delta = target - current;
+  const dist = Math.abs(delta);
+
+  if (dist < 0.001) return target;
+
+  const speed = dist > slowRadius ? maxSpeed : (maxSpeed * dist) / slowRadius;
+
+  const step = speed * dt;
+
+  return dist <= step ? target : current + Math.sign(delta) * step;
+}
