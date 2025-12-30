@@ -46,32 +46,115 @@ export function physicsUpdate() {
   }
 }
 
-export function detectCollisions() {
+function closestPointOnOBB(
+  px: number,
+  py: number,
+  cx: number,
+  cy: number,
+  rightX: number,
+  rightY: number,
+  upX: number,
+  upY: number,
+  hx: number,
+  hy: number
+) {
+  // point in box local coordinates
+  const dx = px - cx;
+  const dy = py - cy;
+
+  const localX = dx * rightX + dy * rightY;
+  const localY = dx * upX + dy * upY;
+
+  // clamp to box extents
+  const clampedX = Math.min(Math.max(localX, -hx), hx);
+  const clampedY = Math.min(Math.max(localY, -hy), hy);
+
+  // back to world
+  return {
+    x: cx + rightX * clampedX + upX * clampedY,
+    y: cy + rightY * clampedX + upY * clampedY,
+  };
+}
+
+export function getEntityUp(baseIdx: number) {
+  const rad = (state.baseEntities.data.r[baseIdx] * Math.PI) / 180;
+  return {
+    x: -Math.sin(rad),
+    y: Math.cos(rad),
+  };
+}
+
+export function getEntityRight(baseIdx: number) {
+  const rad = (state.baseEntities.data.r[baseIdx] * Math.PI) / 180;
+  return { x: Math.cos(rad), y: Math.sin(rad) };
+}
+
+export function detectCollisionsOBB() {
   const d = state.baseEntities.data;
 
   for (let i = 0; i < state.baseEntities.len - 1; i++) {
-    const colALeft = d.x[i] - d.colHalfWidth[i] * d.scaleX[i];
-    const colARight = d.x[i] + d.colHalfWidth[i] * d.scaleX[i];
-    const colATop = d.y[i] + d.colHalfHeight[i] * d.scaleY[i];
-    const colABottom = d.y[i] - d.colHalfHeight[i] * d.scaleY[i];
-
     for (let j = i + 1; j < state.baseEntities.len; j++) {
-      const colBLeft = d.x[j] - d.colHalfWidth[j] * d.scaleX[j];
-      const colBRight = d.x[j] + d.colHalfWidth[j] * d.scaleX[j];
-      const colBTop = d.y[j] + d.colHalfHeight[j] * d.scaleY[j];
-      const colBBottom = d.y[j] - d.colHalfHeight[j] * d.scaleY[j];
+      const diffX = d.x[i] - d.x[j];
+      const diffY = d.y[i] - d.y[j];
 
-      if (
-        colALeft < colBRight &&
-        colARight > colBLeft &&
-        colABottom < colBTop &&
-        colATop > colBBottom
-      ) {
-        state.collisions.push({
-          entityABaseIdx: i,
-          entityBBaseIdx: j,
-        });
+      const aRad = (d.r[i] * Math.PI) / 180;
+      const aUp = { x: -Math.sin(aRad), y: Math.cos(aRad) };
+      const aRight = { x: aUp.y, y: -aUp.x };
+      const bRad = (d.r[j] * Math.PI) / 180;
+      const bUp = { x: -Math.sin(bRad), y: Math.cos(bRad) };
+      const bRight = { x: bUp.y, y: -bUp.x };
+
+      const vectors = [aRight, aUp, bRight, bUp];
+
+      let collision = true;
+      let minPen = Infinity;
+      let minVec = { x: 0, y: 0 };
+
+      for (const v of vectors) {
+        const dProj = Math.abs(diffX * v.x + diffY * v.y);
+
+        const rA =
+          d.colHalfWidth[i] *
+            d.scaleX[i] *
+            Math.abs(aRight.x * v.x + aRight.y * v.y) +
+          d.colHalfHeight[i] *
+            d.scaleY[i] *
+            Math.abs(aUp.x * v.x + aUp.y * v.y);
+        const rB =
+          d.colHalfWidth[j] *
+            d.scaleX[j] *
+            Math.abs(bRight.x * v.x + bRight.y * v.y) +
+          d.colHalfHeight[j] *
+            d.scaleY[j] *
+            Math.abs(bUp.x * v.x + bUp.y * v.y);
+
+        if (dProj > rA + rB) {
+          collision = false;
+          break;
+        }
+
+        const pen = rA + rB - dProj;
+        if (pen < minPen) {
+          minPen = pen;
+          minVec = { x: v.x, y: v.y };
+        }
       }
+
+      if (!collision) continue;
+
+      let nx = minVec.x;
+      let ny = minVec.y;
+
+      if (diffX * nx + diffY * ny > 0) {
+        nx = -nx;
+        ny = -ny;
+      }
+
+      state.collisions.push({
+        entityABaseIdx: i,
+        entityBBaseIdx: j,
+        vector: { x: nx, y: ny },
+      });
     }
   }
 }
@@ -96,12 +179,14 @@ export function handleCollisions() {
 
     let boidBaseIdx;
     let astrBaseIdx;
+    let aIsBoid = false;
     if (
       d.type[aBaseIdx] == EntityType.Boid &&
       d.type[bBaseIdx] == EntityType.Asteroid
     ) {
       boidBaseIdx = aBaseIdx;
       astrBaseIdx = bBaseIdx;
+      aIsBoid = true;
     } else if (
       d.type[aBaseIdx] == EntityType.Asteroid &&
       d.type[bBaseIdx] == EntityType.Boid
@@ -132,10 +217,51 @@ export function handleCollisions() {
       state.baseEntities.data.scaleX[astrBaseIdx] = ASTEROID_HIT_SCALE;
       state.baseEntities.data.scaleY[astrBaseIdx] = ASTEROID_HIT_SCALE;
 
-      state.asteroids.data.stopExpiry[astrIdx] =
+      state.asteroids.data.stopExpirey[astrIdx] =
         state.time.now + ASTEROID_STOP_DURATION;
-      state.baseEntities.data.velX[astrBaseIdx] = 0;
-      state.baseEntities.data.velY[astrBaseIdx] = 0;
+      d.velX[astrBaseIdx] = 0;
+      d.velY[astrBaseIdx] = 0;
+      state.asteroids.data.knockbackVelRStore[astrIdx] = d.velR[astrBaseIdx];
+      d.velR[astrBaseIdx] = 0;
+
+      const colVecForAstr = !aIsBoid
+        ? { x: -collision.vector.x, y: -collision.vector.y }
+        : collision.vector;
+
+      // d.velX[astrBaseIdx] = colVecForAstr.x * 600;
+      // d.velY[astrBaseIdx] = colVecForAstr.y * 600;
+
+      state.asteroids.data.knockbackVelX[astrIdx] = colVecForAstr.x * 1000;
+      state.asteroids.data.knockbackVelY[astrIdx] = colVecForAstr.y * 1000;
+
+      const astrUp = getEntityUp(astrBaseIdx);
+      const astrRight = getEntityRight(astrBaseIdx);
+      const point = closestPointOnOBB(
+        d.x[boidBaseIdx],
+        d.y[boidBaseIdx],
+        d.x[astrBaseIdx],
+        d.y[astrBaseIdx],
+        astrRight.x,
+        astrRight.y,
+        astrUp.x,
+        astrUp.y,
+        d.colHalfWidth[astrBaseIdx],
+        d.colHalfHeight[astrBaseIdx]
+      );
+
+      const leverX = point.x - d.x[astrBaseIdx];
+      const leverY = point.y - d.y[astrBaseIdx];
+      const rotSign = leverX * colVecForAstr.y - leverY * colVecForAstr.x;
+
+      const ROT_IMPULSE = 200;
+
+      if (rotSign > 0) {
+        state.asteroids.data.knockbackVelRDelta[astrIdx] += ROT_IMPULSE;
+        d.r[astrBaseIdx] += 10;
+      } else {
+        state.asteroids.data.knockbackVelRDelta[astrIdx] -= ROT_IMPULSE;
+        d.r[astrBaseIdx] -= 10;
+      }
 
       addHurtCooldown(
         asteroidId,

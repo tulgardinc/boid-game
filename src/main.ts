@@ -17,7 +17,7 @@ import {
 import { renderBoids } from "./meshes/boid";
 import { renderTexturedQuads } from "./meshes/quad";
 import { updateBoids, updateBoidTrails } from "./boid";
-import { detectCollisions, handleCollisions, physicsUpdate } from "./util";
+import { detectCollisionsOBB, handleCollisions, physicsUpdate } from "./util";
 import { updateHealthBars } from "./healthbar";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
@@ -99,7 +99,7 @@ async function main() {
     setupParticleRendering(device);
 
     // collision check
-    detectCollisions();
+    detectCollisionsOBB();
 
     // handle collisions
     handleCollisions();

@@ -6,6 +6,10 @@ import { appendSoA, makeSoA, swapDeleteSoA } from "./SoA";
 export type Collision = {
   entityABaseIdx: number;
   entityBBaseIdx: number;
+  vector: {
+    x: number;
+    y: number;
+  };
 };
 
 export type TrailPointArray = {
@@ -18,6 +22,13 @@ export type TrailPointArray = {
 export type TrailPoint = {
   x: number;
   y: number;
+};
+
+export type Camera = {
+  x: number;
+  y: number;
+  r: number;
+  zoom: number;
 };
 
 export enum EntityType {
@@ -60,10 +71,16 @@ export type Asteroid = {
   health: number;
   damageColorExpiry: number | null;
   shrinkTimer: number | null;
-  stopExpiry: number | null;
+  recoverKnockbackTimer: number | null;
+  stopExpirey: number | null;
+  knockbackVelX: number;
+  knockbackVelY: number;
+  knockbackVelRDelta: number;
+  knockbackVelRStore: number;
   defaultScale: number;
   defaultVelX: number;
   defaultVelY: number;
+  defaultVelR: number;
   outerHealthBarEntityId: number;
 };
 
@@ -166,8 +183,14 @@ export const state = {
     defaultScale: 0,
     defaultVelX: 0,
     defaultVelY: 0,
-    stopExpiry: null,
+    stopExpirey: null,
     outerHealthBarEntityId: 0,
+    defaultVelR: 0,
+    knockbackVelX: 0,
+    knockbackVelY: 0,
+    recoverKnockbackTimer: null,
+    knockbackVelRDelta: 0,
+    knockbackVelRStore: 0,
   }),
   boids: makeSoA<Boid>(100, {
     baseIdx: 0,

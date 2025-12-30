@@ -1,12 +1,13 @@
 import { createHealthBar } from "./healthbar";
-import { appendSoA, swapDeleteSoA } from "./SoA";
+import { appendSoA } from "./SoA";
 import { addBaseEntity, EntityType, scheduleForDelete, state } from "./state";
 import { easeOutCubic, removeHurtCooldown } from "./util";
 
-export const ASTEROID_HIT_SCALE = 0.8;
+export const ASTEROID_HIT_SCALE = 0.85;
 export const ASTEROID_SHRINK_DURATION = 0.15;
-export const ASTEROID_DAMAGE_COLOR_DURATION = 0.15;
-export const ASTEROID_STOP_DURATION = 0.12;
+export const ASTEROID_DAMAGE_COLOR_DURATION = 0.1;
+export const ASTEROID_STOP_DURATION = 0.1;
+export const ASTEROID_KNOCKBACK_RECOVERY_DURATION = 0.4;
 export const ASTEROID_HEALTH = 100;
 
 const MAX_SCALE = 250;
@@ -38,6 +39,7 @@ function createAsteroid() {
   const velY =
     -(Math.abs(spawnY) / spawnY) *
     (Math.random() * (MAX_SPEED - MIN_SPEED) + MIN_SPEED);
+  const velR = randomStep() * Math.random() * (50 - 10) + 10;
 
   const { baseIdx, entityId } = addBaseEntity({
     type: EntityType.Asteroid,
@@ -51,7 +53,7 @@ function createAsteroid() {
 
     velX,
     velY,
-    velR: randomStep() * Math.random() * (50 - 10) + 10,
+    velR,
 
     aclX: 0,
     aclY: 0,
@@ -72,8 +74,14 @@ function createAsteroid() {
     defaultScale: scale,
     defaultVelX: velX,
     defaultVelY: velY,
-    stopExpiry: null,
+    stopExpirey: null,
     outerHealthBarEntityId: 0,
+    defaultVelR: velR,
+    knockbackVelX: 0,
+    knockbackVelY: 0,
+    recoverKnockbackTimer: null,
+    knockbackVelRDelta: 0,
+    knockbackVelRStore: 0,
   });
 
   state.baseEntities.data.typeIdx[baseIdx] = typeIdx;
@@ -108,7 +116,7 @@ export function spawnAsteroidDeathParticles(x: number, y: number) {
     colorInitA: 0.9,
     colorFinalR: 1,
     colorFinalG: 0,
-    colorFinalB: 0.8,
+    colorFinalB: 0.6,
     colorFinalA: 0,
   });
 }
@@ -171,10 +179,33 @@ export function asteroidUpdate() {
       }
     }
 
-    if (ad.stopExpiry[i] && state.time.now >= ad.stopExpiry[i]!) {
-      ad.stopExpiry[i] = null;
-      state.baseEntities.data.velX[baseIdx] = ad.defaultVelX[i];
-      state.baseEntities.data.velY[baseIdx] = ad.defaultVelY[i];
+    if (ad.stopExpirey[i] && state.time.now >= ad.stopExpirey[i]!) {
+      ad.stopExpirey[i] = null;
+      ad.recoverKnockbackTimer[i] = ASTEROID_KNOCKBACK_RECOVERY_DURATION;
+      d.velR[baseIdx] = ad.knockbackVelRStore[i] + ad.knockbackVelRDelta[i];
+      ad.knockbackVelRDelta[i] = 0;
+    }
+
+    const rt = ad.recoverKnockbackTimer[i];
+    if (rt) {
+      if (rt > 0) {
+        const tNorm = rt / ASTEROID_KNOCKBACK_RECOVERY_DURATION;
+        d.velX[baseIdx] = easeOutCubic(
+          1 - tNorm,
+          ad.knockbackVelX[i],
+          ad.defaultVelX[i]
+        );
+        d.velY[baseIdx] = easeOutCubic(
+          1 - tNorm,
+          ad.knockbackVelY[i],
+          ad.defaultVelY[i]
+        );
+        ad.recoverKnockbackTimer[i]! -= state.time.deltaTime;
+      } else {
+        ad.recoverKnockbackTimer[i] = null;
+        d.velX[baseIdx] = ad.defaultVelX[i];
+        d.velY[baseIdx] = ad.defaultVelY[i];
+      }
     }
   }
 

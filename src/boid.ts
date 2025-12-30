@@ -11,6 +11,24 @@ import { angleDiff } from "./util";
 
 export const BOID_DAMAGE = 20;
 
+// PID Controller constants
+const ROTATION_KP = 28;
+const ROTATION_KD = 8;
+
+// Movement constants
+const THRUST_FORCE = 550;
+const SIDE_FRICTION = 10;
+const BACK_FRICTION = 14;
+
+// Separation behavior constants
+const PUSH_DISTANCE = 50;
+const MAX_PUSH_FORCE = 350;
+
+// Trail constants
+const TRAIL_MAX_DISTANCE = 1;
+const TRAIL_OFFSET = 8;
+const TRAIL_SPEED_DIVISOR = 500;
+
 function createBoid(pos: { x: number; y: number }) {
   const { baseIdx, entityId } = addBaseEntity({
     type: EntityType.Boid,
@@ -58,7 +76,6 @@ export function updateBoids() {
     const baseIdx = state.boids.data.baseIdx[i];
 
     // handle movement
-
     const dir = { x: 0, y: 0 };
     dir.x = target.x - d.x[baseIdx];
     dir.y = target.y - d.y[baseIdx];
@@ -66,17 +83,11 @@ export function updateBoids() {
     dir.x /= dist;
     dir.y /= dist;
 
-    let targetAngle = (Math.atan2(-dir.x, dir.y) * 180) / Math.PI;
-    if (targetAngle < 0) {
-      targetAngle += 360;
-    }
+    let targetAngle = ((Math.atan2(-dir.x, dir.y) * 180) / Math.PI + 360) % 360;
 
     const error = angleDiff(targetAngle, d.r[baseIdx]);
 
-    const Kp = 28;
-    const Kd = 8;
-
-    d.aclR[baseIdx] = Kp * error - Kd * d.velR[baseIdx];
+    d.aclR[baseIdx] = ROTATION_KP * error - ROTATION_KD * d.velR[baseIdx];
 
     const rad = (d.r[baseIdx] * Math.PI) / 180;
     const fwdx = -Math.sin(rad);
@@ -88,15 +99,12 @@ export function updateBoids() {
     const vForward = d.velX[baseIdx] * fwdx + d.velY[baseIdx] * fwdy;
     const vSide = d.velX[baseIdx] * sidex + d.velY[baseIdx] * sidey;
 
-    const thrust = 450;
-    const axThrust = fwdx * thrust;
-    const ayThrust = fwdy * thrust;
+    const axThrust = fwdx * THRUST_FORCE;
+    const ayThrust = fwdy * THRUST_FORCE;
 
-    const sideFriction = 6;
-    const sideForce = -vSide * sideFriction;
+    const sideForce = -vSide * SIDE_FRICTION;
 
-    const backFriction = 10;
-    const longFricCoeff = vForward > 0 ? 0 : backFriction;
+    const longFricCoeff = vForward > 0 ? 0 : BACK_FRICTION;
     const longForce = -vForward * longFricCoeff;
 
     const axSide = sideForce * sidex;
@@ -108,9 +116,6 @@ export function updateBoids() {
     let axPush = 0;
     let ayPush = 0;
 
-    const PUSH_DIST = 50;
-    const MAX_PUSH_FORCE = 350;
-
     for (let j = 0; j < state.boids.len; j++) {
       if (j == i) continue;
 
@@ -119,12 +124,12 @@ export function updateBoids() {
       const diffY = d.y[baseIdx] - d.y[otherBaseIdx];
       const dist = Math.hypot(diffX, diffY);
 
-      if (dist > PUSH_DIST) continue;
+      if (dist > PUSH_DISTANCE) continue;
 
       const normX = diffX / dist;
       const normY = diffY / dist;
 
-      const force = (1 - dist / PUSH_DIST) * MAX_PUSH_FORCE;
+      const force = (1 - dist / PUSH_DISTANCE) * MAX_PUSH_FORCE;
 
       axPush += normX * force;
       ayPush += normY * force;
@@ -137,8 +142,6 @@ export function updateBoids() {
 
 export function updateBoidTrails() {
   const d = state.baseEntities.data;
-
-  const MAX_DISTANCE = 1;
 
   for (let i = 0; i < state.boids.len; i++) {
     const baseIdx = state.boids.data.baseIdx[i];
@@ -159,8 +162,8 @@ export function updateBoidTrails() {
     const fwdxN = fwdx / fwdLen;
     const fwdyN = fwdy / fwdLen;
 
-    const x = d.x[baseIdx] - fwdxN * 8;
-    const y = d.y[baseIdx] - fwdyN * 8;
+    const x = d.x[baseIdx] - fwdxN * TRAIL_OFFSET;
+    const y = d.y[baseIdx] - fwdyN * TRAIL_OFFSET;
     const absoluteTPIdx = trailIdx * MAX_TRAIL_LENGTH + tailIdx;
     const tailX = state.trailPoints.data.x[absoluteTPIdx];
     const tailY = state.trailPoints.data.y[absoluteTPIdx];
@@ -170,7 +173,8 @@ export function updateBoidTrails() {
     const dist = Math.hypot(distX, distY);
 
     const speed = Math.hypot(d.velX[baseIdx], d.velY[baseIdx]);
-    const adaptiveDistance = MAX_DISTANCE * (1 + speed / 500);
+    const adaptiveDistance =
+      TRAIL_MAX_DISTANCE * (1 + speed / TRAIL_SPEED_DIVISOR);
 
     if (dist >= adaptiveDistance) {
       addTrailPoint(trailIdx, x, y);
