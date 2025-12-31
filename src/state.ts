@@ -33,6 +33,16 @@ export enum EntityType {
   HealthBarInnner,
 }
 
+export enum ParticleShape {
+  Quad = 0,
+  Circle = 1,
+}
+
+export enum ParticleInterpolationFn {
+  Linear = 0,
+  EaseOut = 1,
+}
+
 export type BaseEntity = {
   entityId: number;
 
@@ -115,6 +125,9 @@ export type ParticleEmitter = {
   spread: number;
   speedMin: number;
   speedMax: number;
+  shapeId: number;
+  sizeFnId: number;
+  colorFnId: number;
   scaleInitX: number;
   scaleInitY: number;
   scaleFinalX: number;
@@ -219,6 +232,9 @@ export const state = {
     spread: 0,
     speedMin: 0,
     speedMax: 0,
+    shapeId: 0,
+    sizeFnId: 0,
+    colorFnId: 0,
     scaleInitX: 0,
     scaleInitY: 0,
     scaleFinalX: 0,

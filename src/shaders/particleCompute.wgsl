@@ -1,6 +1,10 @@
 struct Particle {
     age: f32,
     death_age: f32,
+    shape_id: u32,
+    size_fn_id: u32,
+    color_fn_id: u32,
+    _pad: u32,
     pos: vec2<f32>,
     vel: vec2<f32>,
     start_scale: vec2<f32>,
@@ -13,15 +17,18 @@ struct Emitter {
     base: u32,
     count: u32,
     life_time: f32,
-    _pad: f32,
-    pos_min: vec2<f32>,
-    pos_max: vec2<f32>,
     r: f32,
     spread: f32,
     speed_min: f32,
     speed_max: f32,
+    shape_id: u32,
+    size_fn_id: u32,
+    color_fn_id: u32,
+    pos_min: vec2<f32>,
+    pos_max: vec2<f32>,
     scale_init: vec2<f32>,
     scale_final: vec2<f32>,
+    _pad: vec2<u32>,
     color_init: vec4<f32>,
     color_final: vec4<f32>,
 };
@@ -104,6 +111,9 @@ fn rand(seed: u32) -> f32 {
 
     particle.age = 0;
     particle.death_age = emitter.life_time;
+    particle.shape_id = emitter.shape_id;
+    particle.size_fn_id = emitter.size_fn_id;
+    particle.color_fn_id = emitter.color_fn_id;
     particle.start_color = emitter.color_init;
     particle.final_color = emitter.color_final;
     particle.start_scale = emitter.scale_init;
@@ -142,6 +152,9 @@ fn rand(seed: u32) -> f32 {
     // processing
     next.age = current.age + params.delta_time;
     next.death_age = current.death_age;
+    next.shape_id = current.shape_id;
+    next.size_fn_id = current.size_fn_id;
+    next.color_fn_id = current.color_fn_id;
     next.pos = current.pos + current.vel * params.delta_time;
     next.vel = current.vel;
     next.start_scale = current.start_scale;

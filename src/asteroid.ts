@@ -1,6 +1,13 @@
 import { createHealthBar } from "./healthbar";
 import { appendSoA } from "./SoA";
-import { addBaseEntity, EntityType, scheduleForDelete, state } from "./state";
+import {
+  addBaseEntity,
+  EntityType,
+  ParticleInterpolationFn,
+  ParticleShape,
+  scheduleForDelete,
+  state,
+} from "./state";
 import { easeOutCubic, moveTowardsArrive, removeHurtCooldown } from "./util";
 
 export const ASTEROID_HIT_SCALE = 0.8;
@@ -11,7 +18,7 @@ export const ASTEROID_KNOCKBACK_RECOVERY_DURATION = 0.4;
 export const ASTEROID_DEATH_DELAY = 0.15;
 export const ASTEROID_HEALTH = 100;
 export const ASTEROID_MAX_VEL_R = 90;
-export const ASTEROID_RETURN_VEL_R_SPEED = 100;
+export const ASTEROID_RETURN_VEL_R_SPEED = 150;
 
 const MAX_SCALE = 250;
 const MIN_SCALE = 150;
@@ -108,6 +115,9 @@ export function spawnAsteroidDeathParticles(x: number, y: number, r: number) {
     spread: 180,
     speedMin: 10,
     speedMax: 500,
+    shapeId: ParticleShape.Quad,
+    sizeFnId: ParticleInterpolationFn.Linear,
+    colorFnId: ParticleInterpolationFn.Linear,
     scaleInitX: 40,
     scaleInitY: 40,
     scaleFinalX: 5,
@@ -119,6 +129,33 @@ export function spawnAsteroidDeathParticles(x: number, y: number, r: number) {
     colorFinalR: 1,
     colorFinalG: 0,
     colorFinalB: 0.6,
+    colorFinalA: 0,
+  });
+  appendSoA(state.particleEmitters, {
+    count: 1,
+    lifeTime: 0.8,
+    posMinX: x,
+    posMinY: y,
+    posMaxX: x,
+    posMaxY: y,
+    r,
+    spread: 0,
+    speedMin: 0,
+    speedMax: 0,
+    shapeId: ParticleShape.Circle,
+    sizeFnId: ParticleInterpolationFn.EaseOut,
+    colorFnId: ParticleInterpolationFn.EaseOut,
+    scaleInitX: 40,
+    scaleInitY: 40,
+    scaleFinalX: 600,
+    scaleFinalY: 600,
+    colorInitR: 1,
+    colorInitG: 1,
+    colorInitB: 1,
+    colorInitA: 0.8,
+    colorFinalR: 1,
+    colorFinalG: 1,
+    colorFinalB: 1,
     colorFinalA: 0,
   });
 }

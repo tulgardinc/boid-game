@@ -192,19 +192,23 @@ function initParticleDrawListBuffer(device: GPUDevice) {
 }
 
 function initPartcileStateBuffer(device: GPUDevice) {
-  // float32
+  // float32 / uint32
   // age 1
   // deathAge 1
+  // shape_id 1 (u32)
+  // size_fn_id 1 (u32)
+  // color_fn_id 1 (u32)
+  // _pad 1 (u32)
   // pos 2
   // vel 2
   // scale 2
   // finalScale 2
   // color 4
   // finalColor 4
-  const data = new Float32Array(18 * MAX_PARTICLE_COUNT);
+  const data = new Float32Array(22 * MAX_PARTICLE_COUNT);
   data.fill(0);
   const buffer = device.createBuffer({
-    size: 4 * 18 * MAX_PARTICLE_COUNT,
+    size: 4 * 22 * MAX_PARTICLE_COUNT,
     usage:
       GPUBufferUsage.STORAGE |
       GPUBufferUsage.COPY_SRC |
@@ -249,17 +253,26 @@ function initParticleEmitterBuffer(device: GPUDevice) {
   // count 1
   // float32
   // lifetime 1
-  // padding 1
-  // minPos 2
-  // maxPos 2
-  // minVel 2
-  // maxVel 2
-  // initScale 2
-  // finalScale 2
-  // initColor 4
-  // finalColor 4
+  // r 1
+  // spread 1
+  // speed_min 1
+  // speed_max 1
+  // uint32
+  // shape_id 1
+  // size_fn_id 1
+  // color_fn_id 1
+  // vec2
+  // pos_min 2
+  // pos_max 2
+  // scale_init 2
+  // scale_final 2
+  // _pad 2 (vec2<u32>)
+  // vec4
+  // color_init 4
+  // color_final 4
+  // Total: 28 * 4 = 112 bytes per emitter
   return device.createBuffer({
-    size: 24 * 4 * 500,
+    size: 28 * 4 * 500,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
   });
 }
@@ -636,7 +649,7 @@ export function setupParticleRendering(device: GPUDevice) {
   zeroBuff[0] = 0;
   device.queue.writeBuffer(renderer.particleDrawCountBuffer, 0, zeroBuff);
 
-  const EMITTER_STRIDE = 96;
+  const EMITTER_STRIDE = 112;
   const emitterData = new ArrayBuffer(EMITTER_STRIDE * 500);
   const dv = new DataView(emitterData);
 
@@ -648,27 +661,30 @@ export function setupParticleRendering(device: GPUDevice) {
     dv.setUint32(offset, base, true);
     dv.setUint32(offset + 4, pd.count[i], true);
     dv.setFloat32(offset + 8, pd.lifeTime[i], true);
-    dv.setFloat32(offset + 12, 0, true);
-    dv.setFloat32(offset + 16, pd.posMinX[i], true);
-    dv.setFloat32(offset + 20, pd.posMinY[i], true);
-    dv.setFloat32(offset + 24, pd.posMaxX[i], true);
-    dv.setFloat32(offset + 28, pd.posMaxY[i], true);
-    dv.setFloat32(offset + 32, (pd.r[i] * Math.PI) / 180, true);
-    dv.setFloat32(offset + 36, (pd.spread[i] * Math.PI) / 180, true);
-    dv.setFloat32(offset + 40, pd.speedMin[i], true);
-    dv.setFloat32(offset + 44, pd.speedMax[i], true);
-    dv.setFloat32(offset + 48, pd.scaleInitX[i], true);
-    dv.setFloat32(offset + 52, pd.scaleInitY[i], true);
-    dv.setFloat32(offset + 56, pd.scaleFinalX[i], true);
-    dv.setFloat32(offset + 60, pd.scaleFinalY[i], true);
-    dv.setFloat32(offset + 64, pd.colorInitR[i], true);
-    dv.setFloat32(offset + 68, pd.colorInitG[i], true);
-    dv.setFloat32(offset + 72, pd.colorInitB[i], true);
-    dv.setFloat32(offset + 76, pd.colorInitA[i], true);
-    dv.setFloat32(offset + 80, pd.colorFinalR[i], true);
-    dv.setFloat32(offset + 84, pd.colorFinalG[i], true);
-    dv.setFloat32(offset + 88, pd.colorFinalB[i], true);
-    dv.setFloat32(offset + 92, pd.colorFinalA[i], true);
+    dv.setFloat32(offset + 12, (pd.r[i] * Math.PI) / 180, true);
+    dv.setFloat32(offset + 16, (pd.spread[i] * Math.PI) / 180, true);
+    dv.setFloat32(offset + 20, pd.speedMin[i], true);
+    dv.setFloat32(offset + 24, pd.speedMax[i], true);
+    dv.setUint32(offset + 28, pd.shapeId[i], true);
+    dv.setUint32(offset + 32, pd.sizeFnId[i], true);
+    dv.setUint32(offset + 36, pd.colorFnId[i], true);
+    dv.setFloat32(offset + 40, pd.posMinX[i], true);
+    dv.setFloat32(offset + 44, pd.posMinY[i], true);
+    dv.setFloat32(offset + 48, pd.posMaxX[i], true);
+    dv.setFloat32(offset + 52, pd.posMaxY[i], true);
+    dv.setFloat32(offset + 56, pd.scaleInitX[i], true);
+    dv.setFloat32(offset + 60, pd.scaleInitY[i], true);
+    dv.setFloat32(offset + 64, pd.scaleFinalX[i], true);
+    dv.setFloat32(offset + 68, pd.scaleFinalY[i], true);
+    // Padding: offset 72-76 (_pad vec2<u32>) - skip to 80
+    dv.setFloat32(offset + 80, pd.colorInitR[i], true);
+    dv.setFloat32(offset + 84, pd.colorInitG[i], true);
+    dv.setFloat32(offset + 88, pd.colorInitB[i], true);
+    dv.setFloat32(offset + 92, pd.colorInitA[i], true);
+    dv.setFloat32(offset + 96, pd.colorFinalR[i], true);
+    dv.setFloat32(offset + 100, pd.colorFinalG[i], true);
+    dv.setFloat32(offset + 104, pd.colorFinalB[i], true);
+    dv.setFloat32(offset + 108, pd.colorFinalA[i], true);
 
     base += pd.count[i];
   }
