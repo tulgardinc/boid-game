@@ -65,10 +65,7 @@ function createBoid(pos: { x: number; y: number }) {
 }
 
 export function updateBoids() {
-  const target = {
-    x: (((state.mousePos.x / window.innerWidth) * 2 - 1) * 1920) / 2,
-    y: ((((state.mousePos.y / window.innerHeight) * 2 - 1) * 1080) / 2) * -1,
-  };
+  const target = state.mousePos.world;
 
   const d = state.baseEntities.data;
 

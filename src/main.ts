@@ -13,6 +13,7 @@ import {
   renderer,
   renderTrails,
   setupParticleRendering,
+  updateCamAndMouse,
 } from "./renderer";
 import { renderBoids } from "./meshes/boid";
 import { renderTexturedQuads } from "./meshes/quad";
@@ -23,6 +24,8 @@ import { updateHealthBars } from "./healthbar";
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <canvas width="1920" height="1080" id="canvas"></canvas>
 `;
+
+export const canvas = document.querySelector("canvas")!;
 
 async function main() {
   const adapter = await navigator.gpu?.requestAdapter();
@@ -37,7 +40,6 @@ async function main() {
     console.error("Uncaptured WebGPU error:", error);
   });
 
-  const canvas = document.querySelector("canvas")!;
   const context = canvas.getContext("webgpu")!;
   const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
   context.configure({
@@ -105,6 +107,7 @@ async function main() {
     handleCollisions();
 
     // renderer
+    updateCamAndMouse(device);
     renderTrails();
     renderBoids(device);
     renderTexturedQuads(device);
@@ -230,6 +233,9 @@ async function main() {
       format: navigator.gpu.getPreferredCanvasFormat(),
       alphaMode: "premultiplied",
     });
+
+    state.canvas.width = canvas.width;
+    state.canvas.height = canvas.height;
 
     depthTexture.destroy();
     depthTexture = device.createTexture({

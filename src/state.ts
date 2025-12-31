@@ -1,6 +1,7 @@
 import { asteroidInit } from "./asteroid";
 import { boidInit } from "./boid";
 import { Color } from "./color";
+import { canvas } from "./main";
 import { appendSoA, makeSoA, swapDeleteSoA } from "./SoA";
 
 export type Collision = {
@@ -22,13 +23,6 @@ export type TrailPointArray = {
 export type TrailPoint = {
   x: number;
   y: number;
-};
-
-export type Camera = {
-  x: number;
-  y: number;
-  r: number;
-  zoom: number;
 };
 
 export enum EntityType {
@@ -254,8 +248,24 @@ export const state = {
   deleteSchedule: Array<number>(),
   nextAsteroidSpawn: 0,
   mousePos: {
+    raw: {
+      x: 0,
+      y: 0,
+    },
+    world: {
+      x: 0,
+      y: 0,
+    },
+  },
+  camera: {
     x: 0,
     y: 0,
+    r: 0,
+    zoom: 1.2,
+  },
+  canvas: {
+    width: 0,
+    height: 0,
   },
 };
 
@@ -415,11 +425,15 @@ export function updateGameTime() {
 
 function registerEvents() {
   window.addEventListener("mousemove", (e) => {
-    state.mousePos.x = e.clientX;
-    state.mousePos.y = e.clientY;
+    const rect = canvas.getBoundingClientRect();
+
+    const mxCss = e.clientX - rect.left;
+    const myCss = e.clientY - rect.top;
+
+    state.mousePos.raw.x = mxCss * (state.canvas.width / rect.width);
+    state.mousePos.raw.y = myCss * (state.canvas.height / rect.height);
   });
 }
-
 export function initializeState() {
   const now = Date.now();
   state.time.lastTime = now;

@@ -21,10 +21,14 @@ import {
   getParticleRenderBindGroup,
   getParticleRenderBindGroupLayout,
 } from "./uniforms";
+import { mat4, vec3, vec4 } from "gl-matrix";
+import { isModuleNamespaceObject } from "util/types";
+import { canvas } from "./main";
 
 export type Renderer = {
   instanceCount: number;
   instanceOffset: number;
+  cameraBuffer: GPUBuffer;
   trailVertexBuffer: GPUBuffer;
   trailInstanceBuffer: GPUBuffer;
   instanceBuffer: GPUBuffer;
@@ -277,6 +281,21 @@ function initParticleRingCursorBuffer(device: GPUDevice) {
   return buffer;
 }
 
+function initCameraBuffer(device: GPUDevice) {
+  const vpMatrix = mat4.create();
+  mat4.orthoZO(vpMatrix, -1920 / 2, 1920 / 2, -1080 / 2, 1080 / 2, -1, 1);
+
+  const buffer = device.createBuffer({
+    label: "camera buffer",
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    size: (vpMatrix as Float32Array).byteLength,
+  });
+
+  device.queue.writeBuffer(buffer, 0, (vpMatrix as Float32Array).buffer);
+
+  return buffer;
+}
+
 export type Mesh = {
   vertexBuffer: GPUBuffer;
   indexBuffer: GPUBuffer;
@@ -286,7 +305,10 @@ export type Mesh = {
 
 export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
   const camLayout = getCameraBindGroupLayout(device);
-  const camGroup = getCameraBindGroup(device, camLayout);
+
+  const cameraBuffer = initCameraBuffer(device);
+
+  const camGroup = getCameraBindGroup(device, camLayout, cameraBuffer);
 
   const particleDrawListBuffer = initParticleDrawListBuffer(device);
   const particleDrawCountBuffer = initParticleDrawCountBuffer(device);
@@ -367,6 +389,7 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
   renderer = {
     instanceCount: 0,
     instanceOffset: 0,
+    cameraBuffer,
     trailVertexBuffer: initTrailVertexBuffer(device),
     trailInstanceBuffer: initTrailIndexBuffer(device),
     instanceBuffer: initInstanceBuffer(device),
@@ -669,4 +692,42 @@ export function setupParticleRendering(device: GPUDevice) {
   paramDv.setFloat32(16, state.time.deltaTime, true);
 
   device.queue.writeBuffer(renderer.particleParametersBuffer, 0, paramsBuffer);
+}
+
+// Mouse pos is from last frame when doing gameplay
+// might matter
+export function updateCamAndMouse(device: GPUDevice) {
+  const vpMatrix = mat4.create();
+  const vMatrix = mat4.create();
+
+  const halfWidth = state.canvas.width / 2;
+  const halfHeight = state.canvas.height / 2;
+
+  mat4.scale(vMatrix, vMatrix, [state.camera.zoom, state.camera.zoom, 1]);
+  mat4.rotate(vMatrix, vMatrix, state.camera.r, [0, 0, 1]);
+  mat4.translate(vMatrix, vMatrix, [-state.camera.x, -state.camera.y, 0]);
+
+  mat4.orthoZO(vpMatrix, -halfWidth, halfWidth, -halfHeight, halfHeight, -1, 1);
+  mat4.multiply(vpMatrix, vpMatrix, vMatrix);
+
+  device.queue.writeBuffer(
+    renderer.cameraBuffer,
+    0,
+    (vpMatrix as Float32Array).buffer
+  );
+
+  const mouseVec = vec4.create();
+  vec4.set(
+    mouseVec,
+    state.mousePos.raw.x - halfWidth,
+    halfHeight - state.mousePos.raw.y,
+    0,
+    1
+  );
+  const invertMat = mat4.create();
+  mat4.invert(invertMat, vMatrix);
+  vec4.transformMat4(mouseVec, mouseVec, invertMat);
+
+  state.mousePos.world.x = mouseVec[0];
+  state.mousePos.world.y = mouseVec[1];
 }

@@ -14,26 +14,16 @@ export function getCameraBindGroupLayout(device: GPUDevice) {
 
 export function getCameraBindGroup(
   device: GPUDevice,
-  layout: GPUBindGroupLayout
+  layout: GPUBindGroupLayout,
+  camerabuffer: GPUBuffer
 ) {
-  const vpMatrix = mat4.create();
-  mat4.orthoZO(vpMatrix, -1920 / 2, 1920 / 2, -1080 / 2, 1080 / 2, -1, 1);
-
-  const cameraUBO = device.createBuffer({
-    label: "camera buffer",
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    size: (vpMatrix as Float32Array).byteLength,
-  });
-
-  device.queue.writeBuffer(cameraUBO, 0, (vpMatrix as Float32Array).buffer);
-
   return device.createBindGroup({
     label: "camera bind",
     layout,
     entries: [
       {
         binding: 0,
-        resource: { buffer: cameraUBO },
+        resource: { buffer: camerabuffer },
       },
     ],
   });
