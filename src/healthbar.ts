@@ -131,10 +131,6 @@ export function updateHealthBars() {
     const astIdx = d.typeIdx[astBaseIdx];
     const health = state.asteroids.data.health[astIdx];
 
-    if (health <= 0) {
-      continue;
-    }
-
     d.x[outBaseIdx] = d.x[astBaseIdx];
     d.y[outBaseIdx] = d.y[astBaseIdx] + VERTICAL_OFFSET;
 

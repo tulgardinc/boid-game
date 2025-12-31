@@ -653,10 +653,10 @@ export function setupParticleRendering(device: GPUDevice) {
     dv.setFloat32(offset + 20, pd.posMinY[i], true);
     dv.setFloat32(offset + 24, pd.posMaxX[i], true);
     dv.setFloat32(offset + 28, pd.posMaxY[i], true);
-    dv.setFloat32(offset + 32, pd.velMinX[i], true);
-    dv.setFloat32(offset + 36, pd.velMinY[i], true);
-    dv.setFloat32(offset + 40, pd.velMaxX[i], true);
-    dv.setFloat32(offset + 44, pd.velMaxY[i], true);
+    dv.setFloat32(offset + 32, (pd.r[i] * Math.PI) / 180, true);
+    dv.setFloat32(offset + 36, (pd.spread[i] * Math.PI) / 180, true);
+    dv.setFloat32(offset + 40, pd.speedMin[i], true);
+    dv.setFloat32(offset + 44, pd.speedMax[i], true);
     dv.setFloat32(offset + 48, pd.scaleInitX[i], true);
     dv.setFloat32(offset + 52, pd.scaleInitY[i], true);
     dv.setFloat32(offset + 56, pd.scaleFinalX[i], true);

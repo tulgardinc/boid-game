@@ -98,9 +98,6 @@ async function main() {
     updateBoidTrails();
     emitTrailVertices(device);
 
-    // send particle data
-    setupParticleRendering(device);
-
     // collision check
     detectCollisionsOBB();
 
@@ -108,6 +105,9 @@ async function main() {
     handleCollisions();
 
     cameraUpdate();
+
+    // send particle data
+    setupParticleRendering(device);
 
     // renderer
     updateCamAndMouse(device);

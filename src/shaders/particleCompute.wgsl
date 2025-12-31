@@ -16,8 +16,10 @@ struct Emitter {
     _pad: f32,
     pos_min: vec2<f32>,
     pos_max: vec2<f32>,
-    vel_min: vec2<f32>,
-    vel_max: vec2<f32>,
+    r: f32,
+    spread: f32,
+    speed_min: f32,
+    speed_max: f32,
     scale_init: vec2<f32>,
     scale_final: vec2<f32>,
     color_init: vec4<f32>,
@@ -111,8 +113,13 @@ fn rand(seed: u32) -> f32 {
 
     particle.pos.x = emitter.pos_min.x + (emitter.pos_max.x - emitter.pos_min.x) * rand(seed_input);
     particle.pos.y = emitter.pos_min.y + (emitter.pos_max.y - emitter.pos_min.y) * rand(seed_input + 1u);
-    particle.vel.x = emitter.vel_min.x + (emitter.vel_max.x - emitter.vel_min.x) * rand(seed_input + 2u);
-    particle.vel.y = emitter.vel_min.y + (emitter.vel_max.y - emitter.vel_min.y) * rand(seed_input + 3u);
+    
+    let angle_offset = (rand(seed_input + 2u) * 2.0 - 1.0) * emitter.spread;
+    let final_angle = emitter.r + angle_offset;
+    let speed = emitter.speed_min + (emitter.speed_max - emitter.speed_min) * rand(seed_input + 3u);
+    
+    particle.vel.x = sin(final_angle) * speed;
+    particle.vel.y = cos(final_angle) * speed;
 
     let old = atomicAdd(&emitter_cursor.cursor, 1u);
     let pidx = old % params.max_particle_count;

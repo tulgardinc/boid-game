@@ -204,7 +204,9 @@ export function handleCollisions() {
 
     if (state.cantHurtSet.has(key)) continue;
 
-    const astrIdx = state.baseEntities.data.typeIdx[astrBaseIdx];
+    const astrIdx = d.typeIdx[astrBaseIdx];
+
+    if (state.asteroids.data.health[astrIdx] <= 0) continue;
 
     if (speed > 500) {
       state.asteroids.data.health[astrIdx] -= BOID_DAMAGE;
@@ -214,6 +216,7 @@ export function handleCollisions() {
       d.color[astrBaseIdx] = state.colors.asteroidHurt;
 
       state.asteroids.data.shrinkTimer[astrIdx] = ASTEROID_SHRINK_DURATION;
+
       state.baseEntities.data.scaleX[astrBaseIdx] = ASTEROID_HIT_SCALE;
       state.baseEntities.data.scaleY[astrBaseIdx] = ASTEROID_HIT_SCALE;
 
@@ -228,8 +231,13 @@ export function handleCollisions() {
         ? { x: -collision.vector.x, y: -collision.vector.y }
         : collision.vector;
 
-      state.asteroids.data.knockbackVelX[astrIdx] = colVecForAstr.x * 1000;
-      state.asteroids.data.knockbackVelY[astrIdx] = colVecForAstr.y * 1000;
+      const knockForce =
+        state.asteroids.data.health[astrIdx] <= 0 ? 1500 : 1000;
+
+      state.asteroids.data.knockbackVelX[astrIdx] =
+        colVecForAstr.x * knockForce;
+      state.asteroids.data.knockbackVelY[astrIdx] =
+        colVecForAstr.y * knockForce;
 
       state.camera.x += colVecForAstr.x * 15;
       state.camera.y += colVecForAstr.y * 15;
@@ -291,6 +299,11 @@ export function lerp(t: number, a: number, b: number) {
 
 export function easeOutCubic(t: number, a: number, b: number) {
   return a + (b - a) * (1 - Math.pow(1 - t, 3));
+}
+
+export function getVecDegrees(x: number, y: number) {
+  const radians = Math.atan2(x, y);
+  return (radians * 180) / Math.PI;
 }
 
 export function expApproach(

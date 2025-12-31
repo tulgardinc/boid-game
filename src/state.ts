@@ -67,6 +67,7 @@ export type Asteroid = {
   shrinkTimer: number | null;
   recoverKnockbackTimer: number | null;
   stopExpirey: number | null;
+  deathExpirey: number | null;
   knockbackVelX: number;
   knockbackVelY: number;
   knockbackVelRDelta: number;
@@ -110,10 +111,10 @@ export type ParticleEmitter = {
   posMinY: number;
   posMaxX: number;
   posMaxY: number;
-  velMinX: number;
-  velMinY: number;
-  velMaxX: number;
-  velMaxY: number;
+  r: number;
+  spread: number;
+  speedMin: number;
+  speedMax: number;
   scaleInitX: number;
   scaleInitY: number;
   scaleFinalX: number;
@@ -177,6 +178,7 @@ export const state = {
     defaultVelX: 0,
     defaultVelY: 0,
     stopExpirey: null,
+    deathExpirey: null,
     outerHealthBarEntityId: 0,
     knockbackVelX: 0,
     knockbackVelY: 0,
@@ -213,10 +215,10 @@ export const state = {
     posMaxY: 0,
     posMinX: 0,
     posMinY: 0,
-    velMaxX: 0,
-    velMaxY: 0,
-    velMinX: 0,
-    velMinY: 0,
+    r: 0,
+    spread: 0,
+    speedMin: 0,
+    speedMax: 0,
     scaleInitX: 0,
     scaleInitY: 0,
     scaleFinalX: 0,

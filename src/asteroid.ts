@@ -3,11 +3,12 @@ import { appendSoA } from "./SoA";
 import { addBaseEntity, EntityType, scheduleForDelete, state } from "./state";
 import { easeOutCubic, moveTowardsArrive, removeHurtCooldown } from "./util";
 
-export const ASTEROID_HIT_SCALE = 0.85;
+export const ASTEROID_HIT_SCALE = 0.8;
 export const ASTEROID_SHRINK_DURATION = 0.15;
 export const ASTEROID_DAMAGE_COLOR_DURATION = 0.1;
 export const ASTEROID_STOP_DURATION = 0.1;
 export const ASTEROID_KNOCKBACK_RECOVERY_DURATION = 0.4;
+export const ASTEROID_DEATH_DELAY = 0.15;
 export const ASTEROID_HEALTH = 100;
 export const ASTEROID_MAX_VEL_R = 90;
 export const ASTEROID_RETURN_VEL_R_SPEED = 100;
@@ -77,6 +78,7 @@ function createAsteroid() {
     defaultVelX: velX,
     defaultVelY: velY,
     stopExpirey: null,
+    deathExpirey: null,
     outerHealthBarEntityId: 0,
     knockbackVelX: 0,
     knockbackVelY: 0,
@@ -94,8 +96,7 @@ function createAsteroid() {
   state.asteroids.data.outerHealthBarEntityId[typeIdx] = outerHealthBarEntityId;
 }
 
-export function spawnAsteroidDeathParticles(x: number, y: number) {
-  const VEL = 400;
+export function spawnAsteroidDeathParticles(x: number, y: number, r: number) {
   appendSoA(state.particleEmitters, {
     count: 30,
     lifeTime: 0.85,
@@ -103,10 +104,10 @@ export function spawnAsteroidDeathParticles(x: number, y: number) {
     posMinY: y,
     posMaxX: x,
     posMaxY: y,
-    velMinX: -VEL,
-    velMinY: -VEL,
-    velMaxX: VEL,
-    velMaxY: VEL,
+    r,
+    spread: 180,
+    speedMin: 10,
+    speedMax: 500,
     scaleInitX: 40,
     scaleInitY: 40,
     scaleFinalX: 5,
@@ -144,8 +145,13 @@ export function asteroidUpdate() {
 
   for (let i = 0; i < state.asteroids.len; i++) {
     const baseIdx = state.asteroids.data.baseIdx[i];
-    if (ad.health[i] <= 0) {
-      spawnAsteroidDeathParticles(d.x[baseIdx], d.y[baseIdx]);
+
+    if (ad.health[i] <= 0 && ad.deathExpirey[i] == null) {
+      ad.deathExpirey[i] = state.time.now + ASTEROID_DEATH_DELAY;
+    }
+
+    if (ad.deathExpirey[i] && state.time.now >= ad.deathExpirey[i]!) {
+      spawnAsteroidDeathParticles(d.x[baseIdx], d.y[baseIdx], d.r[baseIdx]);
       scheduleAsteroidForDelete(d.entityId[baseIdx]);
       continue;
     }
@@ -158,7 +164,11 @@ export function asteroidUpdate() {
       continue;
     }
 
-    if (ad.damageColorExpiry[i] && state.time.now >= ad.damageColorExpiry[i]!) {
+    if (
+      ad.damageColorExpiry[i] &&
+      !ad.deathExpirey[i] &&
+      state.time.now >= ad.damageColorExpiry[i]!
+    ) {
       ad.damageColorExpiry[i] = null;
       state.baseEntities.data.color[baseIdx] = state.colors.asteroid;
     }
