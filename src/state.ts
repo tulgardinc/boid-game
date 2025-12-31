@@ -261,7 +261,13 @@ export const state = {
     x: 0,
     y: 0,
     r: 0,
-    zoom: 1.2,
+    zoom: 1.1,
+    target: {
+      x: 0,
+      y: 0,
+      r: 0,
+      zoom: 1.2,
+    },
   },
   canvas: {
     width: 0,

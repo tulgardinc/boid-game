@@ -228,11 +228,11 @@ export function handleCollisions() {
         ? { x: -collision.vector.x, y: -collision.vector.y }
         : collision.vector;
 
-      // d.velX[astrBaseIdx] = colVecForAstr.x * 600;
-      // d.velY[astrBaseIdx] = colVecForAstr.y * 600;
-
       state.asteroids.data.knockbackVelX[astrIdx] = colVecForAstr.x * 1000;
       state.asteroids.data.knockbackVelY[astrIdx] = colVecForAstr.y * 1000;
+
+      state.camera.x += colVecForAstr.x * 15;
+      state.camera.y += colVecForAstr.y * 15;
 
       const astrUp = getEntityUp(astrBaseIdx);
       const astrRight = getEntityRight(astrBaseIdx);
@@ -251,17 +251,15 @@ export function handleCollisions() {
 
       const leverX = point.x - d.x[astrBaseIdx];
       const leverY = point.y - d.y[astrBaseIdx];
-      const rotSign = leverX * colVecForAstr.y - leverY * colVecForAstr.x;
+      const rotSign = Math.sign(
+        leverX * colVecForAstr.y - leverY * colVecForAstr.x
+      );
 
       const ROT_IMPULSE = 200;
 
-      if (rotSign > 0) {
-        state.asteroids.data.knockbackVelRDelta[astrIdx] += ROT_IMPULSE;
-        d.r[astrBaseIdx] += 10;
-      } else {
-        state.asteroids.data.knockbackVelRDelta[astrIdx] -= ROT_IMPULSE;
-        d.r[astrBaseIdx] -= 10;
-      }
+      state.asteroids.data.knockbackVelRDelta[astrIdx] += rotSign * ROT_IMPULSE;
+      d.r[astrBaseIdx] += rotSign * 10;
+      state.camera.r += rotSign * 0.3;
 
       addHurtCooldown(
         asteroidId,

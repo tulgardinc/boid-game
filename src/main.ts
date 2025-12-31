@@ -20,6 +20,7 @@ import { renderTexturedQuads } from "./meshes/quad";
 import { updateBoids, updateBoidTrails } from "./boid";
 import { detectCollisionsOBB, handleCollisions, physicsUpdate } from "./util";
 import { updateHealthBars } from "./healthbar";
+import { cameraUpdate } from "./camera";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <canvas width="1920" height="1080" id="canvas"></canvas>
@@ -105,6 +106,8 @@ async function main() {
 
     // handle collisions
     handleCollisions();
+
+    cameraUpdate();
 
     // renderer
     updateCamAndMouse(device);

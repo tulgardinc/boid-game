@@ -21,9 +21,7 @@ import {
   getParticleRenderBindGroup,
   getParticleRenderBindGroupLayout,
 } from "./uniforms";
-import { mat4, vec3, vec4 } from "gl-matrix";
-import { isModuleNamespaceObject } from "util/types";
-import { canvas } from "./main";
+import { mat4, vec4 } from "gl-matrix";
 
 export type Renderer = {
   instanceCount: number;
@@ -703,8 +701,10 @@ export function updateCamAndMouse(device: GPUDevice) {
   const halfWidth = state.canvas.width / 2;
   const halfHeight = state.canvas.height / 2;
 
+  const rads = (state.camera.r * Math.PI) / 180;
+
   mat4.scale(vMatrix, vMatrix, [state.camera.zoom, state.camera.zoom, 1]);
-  mat4.rotate(vMatrix, vMatrix, state.camera.r, [0, 0, 1]);
+  mat4.rotate(vMatrix, vMatrix, rads, [0, 0, 1]);
   mat4.translate(vMatrix, vMatrix, [-state.camera.x, -state.camera.y, 0]);
 
   mat4.orthoZO(vpMatrix, -halfWidth, halfWidth, -halfHeight, halfHeight, -1, 1);
