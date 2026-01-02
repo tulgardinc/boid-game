@@ -156,3 +156,71 @@ export function getParticleRenderBindGroup(
     ],
   });
 }
+
+export function getTextAtlasBindGroupLayout(device: GPUDevice) {
+  return device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: "float" },
+      },
+      {
+        binding: 1,
+        visibility: GPUShaderStage.FRAGMENT,
+        sampler: { type: "non-filtering" },
+      },
+    ],
+  });
+}
+
+export function getTextAtlasBindGroup(
+  device: GPUDevice,
+  layout: GPUBindGroupLayout,
+  textureView: GPUTextureView,
+  sampler: GPUSampler
+) {
+  return device.createBindGroup({
+    label: "text atlas bind",
+    layout,
+    entries: [
+      {
+        binding: 0,
+        resource: textureView,
+      },
+      {
+        binding: 1,
+        resource: sampler,
+      },
+    ],
+  });
+}
+
+export function getScreenSpaceBindGroupLayout(device: GPUDevice) {
+  return device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX,
+        buffer: { type: "uniform" },
+      },
+    ],
+  });
+}
+
+export function getScreenSpaceBindGroup(
+  device: GPUDevice,
+  layout: GPUBindGroupLayout,
+  screenSpaceBuffer: GPUBuffer
+) {
+  return device.createBindGroup({
+    label: "screen space bind",
+    layout,
+    entries: [
+      {
+        binding: 0,
+        resource: { buffer: screenSpaceBuffer },
+      },
+    ],
+  });
+}

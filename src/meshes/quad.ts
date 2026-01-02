@@ -53,7 +53,7 @@ export function renderTexturedQuads(device: GPUDevice) {
   const firstInstance = updateTransformColorGPUData(device, quadBaseIdxs);
 
   renderer.renderQueue.push({
-    pipeline: "transform2D",
+    pipeline: "worldTF2D",
     mesh: "quad",
     bindGroup: "camera",
     instanceCount: quadBaseIdxs.length,

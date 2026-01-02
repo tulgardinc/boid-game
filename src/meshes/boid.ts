@@ -44,7 +44,7 @@ export function renderBoids(device: GPUDevice) {
   const firstInstance = updateTransformColorGPUData(device, boidBaseIdxs);
 
   renderer.renderQueue.push({
-    pipeline: "transform2D",
+    pipeline: "worldTF2D",
     mesh: "boid",
     bindGroup: "camera",
     instanceCount: state.boids.len,

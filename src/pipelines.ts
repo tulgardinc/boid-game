@@ -176,3 +176,54 @@ export function getParticleRenderPipeline(
     },
   });
 }
+
+export function getTextPipeline(
+  device: GPUDevice,
+  format: GPUTextureFormat,
+  bindGroups: Renderer["bindGroups"],
+  shaders: Renderer["shaders"],
+  vertexBufferLayouts: VertexBufferLayouts,
+  instanceBufferLayouts: InstanceBufferLayouts
+): GPURenderPipeline {
+  return device.createRenderPipeline({
+    label: "text render",
+    layout: device.createPipelineLayout({
+      bindGroupLayouts: [bindGroups.camera.layout, bindGroups.textAtlas.layout],
+    }),
+    vertex: {
+      entryPoint: "vs",
+      module: shaders.text,
+      buffers: [
+        vertexBufferLayouts.textGlyph,
+        instanceBufferLayouts.textGlyphInstance,
+      ],
+    },
+    fragment: {
+      entryPoint: "fs",
+      module: shaders.text,
+      targets: [
+        {
+          format,
+          blend: {
+            color: {
+              srcFactor: "src-alpha",
+              dstFactor: "one-minus-src-alpha",
+              operation: "add",
+            },
+            alpha: {
+              srcFactor: "one",
+              dstFactor: "one-minus-src-alpha",
+              operation: "add",
+            },
+          },
+        },
+      ],
+    },
+    primitive: { topology: "triangle-list" },
+    depthStencil: {
+      format: "depth24plus",
+      depthCompare: "less-equal",
+      depthWriteEnabled: false,
+    },
+  });
+}

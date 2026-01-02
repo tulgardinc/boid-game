@@ -43,6 +43,34 @@ export enum ParticleInterpolationFn {
   EaseOut = 1,
 }
 
+export enum TextAlign {
+  Left = 0,
+  Center = 1,
+  Right = 2,
+}
+
+export enum TextAnchor {
+  TopLeft = 0,
+  TopCenter = 1,
+  TopRight = 2,
+  MiddleLeft = 3,
+  MiddleCenter = 4,
+  MiddleRight = 5,
+  BottomLeft = 6,
+  BottomCenter = 7,
+  BottomRight = 8,
+}
+
+export type Text = {
+  x: number;
+  y: number;
+  scale: number;
+  content: string;
+  color: keyof typeof colors;
+  align: TextAlign;
+  anchor: TextAnchor;
+};
+
 export type BaseEntity = {
   entityId: number;
 
@@ -143,6 +171,15 @@ export type ParticleEmitter = {
 };
 
 export const MAX_TRAIL_LENGTH = 50;
+
+const colors = {
+  boid: { r: 1, g: 1, b: 1 },
+  asteroid: { r: 1, g: 0, b: 0.2 },
+  asteroidHurt: { r: 1, g: 1, b: 1 },
+  outerHelthBar: { r: 0.1, g: 0.1, b: 0.1 },
+  transitionHealthBar: { r: 1, g: 1, b: 1 },
+  innerHelthhBar: { r: 0.9, g: 0, b: 0 },
+};
 
 export const state = {
   currentId: 0,
@@ -248,14 +285,16 @@ export const state = {
     colorFinalB: 0,
     colorFinalA: 0,
   }),
-  colors: {
-    boid: { r: 1, g: 1, b: 1 },
-    asteroid: { r: 1, g: 0, b: 0.2 },
-    asteroidHurt: { r: 1, g: 1, b: 1 },
-    outerHelthBar: { r: 0.1, g: 0.1, b: 0.1 },
-    transitionHealthBar: { r: 1, g: 1, b: 1 },
-    innerHelthhBar: { r: 0.9, g: 0, b: 0 },
-  },
+  texts: makeSoA<Text>(100, {
+    x: 0,
+    y: 0,
+    scale: 0,
+    content: "",
+    color: "boid",
+    align: TextAlign.Left,
+    anchor: TextAnchor.TopLeft,
+  }),
+  colors,
   collisions: new Array<Collision>(),
   prevCollisions: new Set<string>(),
   time: {
@@ -291,6 +330,8 @@ export const state = {
     width: 0,
     height: 0,
   },
+  scoreBoardIdx: 0,
+  score: 0,
 };
 
 export function swapDeleteTrail(ownerId: number) {

@@ -188,6 +188,7 @@ export function asteroidUpdate() {
     }
 
     if (ad.deathExpirey[i] && state.time.now >= ad.deathExpirey[i]!) {
+      state.score += 50;
       spawnAsteroidDeathParticles(d.x[baseIdx], d.y[baseIdx], d.r[baseIdx]);
       scheduleAsteroidForDelete(d.entityId[baseIdx]);
       continue;

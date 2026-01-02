@@ -3,6 +3,8 @@ import {
   updateGameTime,
   deleteScheduledEntities,
   state,
+  TextAlign,
+  TextAnchor,
 } from "./state";
 import "./style.css";
 import { asteroidUpdate } from "./asteroid";
@@ -14,13 +16,16 @@ import {
   renderTrails,
   setupParticleRendering,
   updateCamAndMouse,
+  updateScreenSpace,
 } from "./renderer";
 import { renderBoids } from "./meshes/boid";
 import { renderTexturedQuads } from "./meshes/quad";
+import { setupTextRendering, getGlyphCount } from "./meshes/glyphQuad";
 import { updateBoids, updateBoidTrails } from "./boid";
 import { detectCollisionsOBB, handleCollisions, physicsUpdate } from "./util";
 import { updateHealthBars } from "./healthbar";
 import { cameraUpdate } from "./camera";
+import { appendSoA } from "./SoA";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <canvas width="1920" height="1080" id="canvas"></canvas>
@@ -49,7 +54,7 @@ async function main() {
   });
 
   initializeState();
-  initRenderer(device, presentationFormat);
+  await initRenderer(device, presentationFormat);
 
   let depthTexture = device.createTexture({
     size: [canvas.width, canvas.height],
@@ -79,6 +84,16 @@ async function main() {
     },
   };
 
+  state.scoreBoardIdx = appendSoA(state.texts, {
+    x: 0,
+    y: 70,
+    scale: 70,
+    color: "boid",
+    content: "",
+    align: TextAlign.Right,
+    anchor: TextAnchor.TopRight,
+  });
+
   function render() {
     // system logic
     updateGameTime();
@@ -87,6 +102,8 @@ async function main() {
     asteroidUpdate();
     updateHealthBars();
     updateBoids();
+
+    state.texts.data.content[state.scoreBoardIdx] = state.score.toString();
 
     // deletetions
     deleteScheduledEntities();
@@ -108,6 +125,9 @@ async function main() {
 
     // send particle data
     setupParticleRendering(device);
+
+    // send text data
+    setupTextRendering(device);
 
     // renderer
     updateCamAndMouse(device);
@@ -171,7 +191,7 @@ async function main() {
             renderer.meshes[command.mesh].indexBuffer,
             "uint16"
           );
-          renderPass.setVertexBuffer(1, renderer.instanceBuffer);
+          renderPass.setVertexBuffer(1, renderer.staticGeoIB);
           renderPass.drawIndexed(
             command.indexCount,
             command.instanceCount,
@@ -186,8 +206,8 @@ async function main() {
             0,
             renderer.bindGroups[command.bindGroup].group
           );
-          renderPass.setVertexBuffer(0, renderer.trailVertexBuffer);
-          renderPass.setIndexBuffer(renderer.trailInstanceBuffer, "uint16");
+          renderPass.setVertexBuffer(0, renderer.trailVB);
+          renderPass.setIndexBuffer(renderer.trailIDXB, "uint16");
           renderPass.drawIndexed(command.indexCount, 1, 0, 0);
           break;
       }
@@ -200,12 +220,27 @@ async function main() {
     const VERRICES_PER_PARTICLE = 6;
     renderPass.draw(MAX_PARTICLE_COUNT * VERRICES_PER_PARTICLE);
 
+    // Render text
+    const glyphCount = getGlyphCount();
+    if (glyphCount > 0) {
+      renderPass.setPipeline(renderer.renderPipelines.text);
+      renderPass.setBindGroup(0, renderer.bindGroups.screenSpace.group);
+      renderPass.setBindGroup(1, renderer.bindGroups.textAtlas.group);
+      renderPass.setVertexBuffer(0, renderer.meshes.glyphQuad.vertexBuffer);
+      renderPass.setVertexBuffer(1, renderer.glyphIB);
+      renderPass.setIndexBuffer(
+        renderer.meshes.glyphQuad.indexBuffer,
+        "uint16"
+      );
+      renderPass.drawIndexed(6, glyphCount, 0, 0, 0);
+    }
+
     renderPass.end();
 
     const commandBuffer = encoder.finish();
 
-    renderer.instanceOffset = 0;
-    renderer.instanceCount = 0;
+    renderer.staticGeoInstanceOffset = 0;
+    renderer.staticGeoInstanceCount = 0;
     renderer.renderQueue.length = 0;
 
     renderer.particleShouldUseAB = !renderer.particleShouldUseAB;
@@ -239,6 +274,9 @@ async function main() {
 
     state.canvas.width = canvas.width;
     state.canvas.height = canvas.height;
+
+    // Update screen space matrix for the new canvas size
+    updateScreenSpace(device);
 
     depthTexture.destroy();
     depthTexture = device.createTexture({

@@ -2,14 +2,21 @@ import transform2DColorCode from "./shaders/coloredTransform.wgsl?raw";
 import trailCode from "./shaders/trail.wgsl?raw";
 import particleComputeCode from "./shaders/particleCompute.wgsl?raw";
 import particleRenderCode from "./shaders/particleRender.wgsl?raw";
+import textCode from "./shaders/text.wgsl?raw";
+import fontAtlasUrl from "./font-atlases/DejaVu_Sans_Mono.png";
 import { getBoidIndexBufer, getBoidVertexBuffer } from "./meshes/boid";
 import { getQuadVertexBuffer, getQuadIndexBuffer } from "./meshes/quad";
+import {
+  getGlyphQuadVertexBuffer,
+  getGlyphQuadIndexBuffer,
+} from "./meshes/glyphQuad";
 import {
   get2DTransformPipeline,
   getParticleDrawListPipeline,
   getParticleRenderPipeline,
   getParticleSpawnPipeline,
   getParticleStatePipeline,
+  getTextPipeline,
   getTrailPipeline,
 } from "./pipelines";
 import { MAX_TRAIL_LENGTH, state } from "./state";
@@ -20,38 +27,50 @@ import {
   getParticleComputeBindGroupLayout,
   getParticleRenderBindGroup,
   getParticleRenderBindGroupLayout,
+  getScreenSpaceBindGroup,
+  getScreenSpaceBindGroupLayout,
+  getTextAtlasBindGroup,
+  getTextAtlasBindGroupLayout,
 } from "./uniforms";
 import { mat4, vec4 } from "gl-matrix";
 
 export type Renderer = {
-  instanceCount: number;
-  instanceOffset: number;
-  cameraBuffer: GPUBuffer;
-  trailVertexBuffer: GPUBuffer;
-  trailInstanceBuffer: GPUBuffer;
-  instanceBuffer: GPUBuffer;
-  particleDrawListBuffer: GPUBuffer;
-  particleDrawCountBuffer: GPUBuffer;
-  particleStateBufferA: GPUBuffer;
-  particleStateBufferB: GPUBuffer;
-  particleParametersBuffer: GPUBuffer;
-  particleEmitterBuffer: GPUBuffer;
-  particleRingCursorBuffer: GPUBuffer;
+  staticGeoInstanceCount: number;
+  staticGeoInstanceOffset: number;
+  cameraUB: GPUBuffer;
+  screenSpaceUB: GPUBuffer;
+  trailVB: GPUBuffer;
+  trailIDXB: GPUBuffer;
+  staticGeoIB: GPUBuffer;
+  particleDrawListSB: GPUBuffer;
+  particleDrawCountSB: GPUBuffer;
+  particleStateSBA: GPUBuffer;
+  particleStateSBB: GPUBuffer;
+  particleParametersUB: GPUBuffer;
+  particleEmitterSB: GPUBuffer;
+  particleRingCursorSB: GPUBuffer;
   particleShouldUseAB: boolean;
+  glyphIB: GPUBuffer;
+  glyphAtlasT: GPUTexture;
+  glyphAtlasTV: GPUTextureView;
+  glyphAtlasSMP: GPUSampler;
   shaders: {
     coloredTransform: GPUShaderModule;
     trail: GPUShaderModule;
     particleCompute: GPUShaderModule;
     particleRender: GPUShaderModule;
+    text: GPUShaderModule;
   };
   meshes: {
     quad: Mesh;
     boid: Mesh;
+    glyphQuad: Mesh;
   };
   renderPipelines: {
-    transform2D: GPURenderPipeline;
+    worldTF2D: GPURenderPipeline;
     trail: GPURenderPipeline;
     particleRender: GPURenderPipeline;
+    text: GPURenderPipeline;
   };
   computePipelines: {
     particleSpawn: GPUComputePipeline;
@@ -60,6 +79,10 @@ export type Renderer = {
   };
   bindGroups: {
     camera: {
+      layout: GPUBindGroupLayout;
+      group: GPUBindGroup;
+    };
+    screenSpace: {
       layout: GPUBindGroupLayout;
       group: GPUBindGroup;
     };
@@ -76,6 +99,10 @@ export type Renderer = {
       group: GPUBindGroup;
     };
     particleRenderB: {
+      layout: GPUBindGroupLayout;
+      group: GPUBindGroup;
+    };
+    textAtlas: {
       layout: GPUBindGroupLayout;
       group: GPUBindGroup;
     };
@@ -117,6 +144,17 @@ const vertexBufferLayouts: { [k: string]: GPUVertexBufferLayout } = {
       },
     ],
   },
+  textGlyph: {
+    arrayStride: 2 * 4,
+    stepMode: "vertex",
+    attributes: [
+      {
+        shaderLocation: 2, // vpos
+        offset: 0,
+        format: "float32x2",
+      },
+    ],
+  },
 };
 
 export type InstanceBufferLayouts = {
@@ -146,6 +184,32 @@ const instanceBufferLayouts: { [k: string]: GPUVertexBufferLayout } = {
         shaderLocation: 4,
         offset: 5 * 4,
         format: "float32x3",
+      },
+    ],
+  },
+  textGlyphInstance: {
+    arrayStride: 10 * 4, // 40 bytes: color(4) + uvOffset(2) + pos(2) + scale(1) + padding(1)
+    stepMode: "instance",
+    attributes: [
+      {
+        shaderLocation: 0, // color
+        offset: 0,
+        format: "float32x4",
+      },
+      {
+        shaderLocation: 1, // uvOffset
+        offset: 4 * 4,
+        format: "float32x2",
+      },
+      {
+        shaderLocation: 3, // pos
+        offset: 6 * 4,
+        format: "float32x2",
+      },
+      {
+        shaderLocation: 4, // scale
+        offset: 8 * 4,
+        format: "float32",
       },
     ],
   },
@@ -307,6 +371,71 @@ function initCameraBuffer(device: GPUDevice) {
   return buffer;
 }
 
+function initScreenSpaceBuffer(device: GPUDevice) {
+  // Screen space: origin at top-left, +X right, +Y down
+  // For a 1920x1080 canvas, this maps [0,1920]x[0,1080] to NDC [-1,1]x[1,-1]
+  const vpMatrix = mat4.create();
+  mat4.orthoZO(vpMatrix, 0, 1920, 1080, 0, -1, 1);
+
+  const buffer = device.createBuffer({
+    label: "screen space buffer",
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    size: (vpMatrix as Float32Array).byteLength,
+  });
+
+  device.queue.writeBuffer(buffer, 0, (vpMatrix as Float32Array).buffer);
+
+  return buffer;
+}
+
+function initGlyphInstanceBuffer(device: GPUDevice) {
+  // Per instance (10 floats = 40 bytes):
+  // color: vec4<f32> (4 floats)
+  // uvOffset: vec2<f32> (2 floats)
+  // pos: vec2<f32> (2 floats)
+  // scale: f32 (1 float)
+  // padding: f32 (1 float)
+  return device.createBuffer({
+    size: 10 * 4 * 1000,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+  });
+}
+
+async function initGlyphAtlasTexture(device: GPUDevice) {
+  const response = await fetch(fontAtlasUrl);
+  const blob = await response.blob();
+  const imageBitmap = await createImageBitmap(blob);
+
+  const texture = device.createTexture({
+    size: [imageBitmap.width, imageBitmap.height, 1],
+    format: "rgba8unorm",
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_DST |
+      GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
+  device.queue.copyExternalImageToTexture(
+    { source: imageBitmap },
+    { texture: texture },
+    [imageBitmap.width, imageBitmap.height]
+  );
+
+  const textureView = texture.createView();
+
+  return { texture, textureView };
+}
+
+function initGlyphAtlasSampler(device: GPUDevice) {
+  return device.createSampler({
+    magFilter: "nearest",
+    minFilter: "nearest",
+    addressModeU: "clamp-to-edge",
+    addressModeV: "clamp-to-edge",
+    addressModeW: "clamp-to-edge",
+  });
+}
+
 export type Mesh = {
   vertexBuffer: GPUBuffer;
   indexBuffer: GPUBuffer;
@@ -314,63 +443,89 @@ export type Mesh = {
   instanceBufferLayoutId: keyof typeof instanceBufferLayouts;
 };
 
-export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
+export async function initRenderer(
+  device: GPUDevice,
+  format: GPUTextureFormat
+) {
   const camLayout = getCameraBindGroupLayout(device);
+  const cameraUB = initCameraBuffer(device);
+  const camGroup = getCameraBindGroup(device, camLayout, cameraUB);
 
-  const cameraBuffer = initCameraBuffer(device);
+  const screenSpaceLayout = getScreenSpaceBindGroupLayout(device);
+  const screenSpaceUB = initScreenSpaceBuffer(device);
+  const screenSpaceGroup = getScreenSpaceBindGroup(
+    device,
+    screenSpaceLayout,
+    screenSpaceUB
+  );
 
-  const camGroup = getCameraBindGroup(device, camLayout, cameraBuffer);
-
-  const particleDrawListBuffer = initParticleDrawListBuffer(device);
-  const particleDrawCountBuffer = initParticleDrawCountBuffer(device);
-  const particleStateBufferA = initPartcileStateBuffer(device);
-  const particleStateBufferB = initPartcileStateBuffer(device);
-  const particleParametersBuffer = initParticleParametersBuffer(device);
-  const particleEmitterBuffer = initParticleEmitterBuffer(device);
-  const particleRingCursorBuffer = initParticleRingCursorBuffer(device);
+  const particleDrawListSB = initParticleDrawListBuffer(device);
+  const particleDrawCountSB = initParticleDrawCountBuffer(device);
+  const particleStateSBA = initPartcileStateBuffer(device);
+  const particleStateSBB = initPartcileStateBuffer(device);
+  const particleParametersUB = initParticleParametersBuffer(device);
+  const particleEmitterSB = initParticleEmitterBuffer(device);
+  const particleRingCursorSB = initParticleRingCursorBuffer(device);
 
   const particleComputeLayout = getParticleComputeBindGroupLayout(device);
   const particleComputeGAB = getParticleComputeBindGroup(
     device,
     particleComputeLayout,
-    particleDrawListBuffer,
-    particleDrawCountBuffer,
-    particleStateBufferA,
-    particleStateBufferB,
-    particleParametersBuffer,
-    particleEmitterBuffer,
-    particleRingCursorBuffer
+    particleDrawListSB,
+    particleDrawCountSB,
+    particleStateSBA,
+    particleStateSBB,
+    particleParametersUB,
+    particleEmitterSB,
+    particleRingCursorSB
   );
   const particleComputeGBA = getParticleComputeBindGroup(
     device,
     particleComputeLayout,
-    particleDrawListBuffer,
-    particleDrawCountBuffer,
-    particleStateBufferB,
-    particleStateBufferA,
-    particleParametersBuffer,
-    particleEmitterBuffer,
-    particleRingCursorBuffer
+    particleDrawListSB,
+    particleDrawCountSB,
+    particleStateSBB,
+    particleStateSBA,
+    particleParametersUB,
+    particleEmitterSB,
+    particleRingCursorSB
   );
 
   const particleRenderLayout = getParticleRenderBindGroupLayout(device);
   const particleRenderBGA = getParticleRenderBindGroup(
     device,
     particleRenderLayout,
-    particleDrawListBuffer,
-    particleStateBufferA
+    particleDrawListSB,
+    particleStateSBA
   );
   const particleRenderBGB = getParticleRenderBindGroup(
     device,
     particleRenderLayout,
-    particleDrawListBuffer,
-    particleStateBufferB
+    particleDrawListSB,
+    particleStateSBB
+  );
+
+  const glyphIB = initGlyphInstanceBuffer(device);
+  const { texture: glyphAtlasT, textureView: glyphAtlasTV } =
+    await initGlyphAtlasTexture(device);
+  const glyphAtlasSMP = initGlyphAtlasSampler(device);
+
+  const textAtlasLayout = getTextAtlasBindGroupLayout(device);
+  const textAtlasGroup = getTextAtlasBindGroup(
+    device,
+    textAtlasLayout,
+    glyphAtlasTV,
+    glyphAtlasSMP
   );
 
   const bindGroups: Renderer["bindGroups"] = {
     camera: {
       layout: camLayout,
       group: camGroup,
+    },
+    screenSpace: {
+      layout: screenSpaceLayout,
+      group: screenSpaceGroup,
     },
     particleComputeAB: {
       layout: particleComputeLayout,
@@ -388,6 +543,10 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
       layout: particleRenderLayout,
       group: particleRenderBGB,
     },
+    textAtlas: {
+      layout: textAtlasLayout,
+      group: textAtlasGroup,
+    },
   };
 
   const shaders: Renderer["shaders"] = {
@@ -395,23 +554,29 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
     trail: getShaderTrail(device),
     particleCompute: getShaderParticleCompute(device),
     particleRender: getShaderParticleRender(device),
+    text: getShaderText(device),
   };
 
   renderer = {
-    instanceCount: 0,
-    instanceOffset: 0,
-    cameraBuffer,
-    trailVertexBuffer: initTrailVertexBuffer(device),
-    trailInstanceBuffer: initTrailIndexBuffer(device),
-    instanceBuffer: initInstanceBuffer(device),
-    particleDrawListBuffer,
-    particleDrawCountBuffer,
-    particleStateBufferA,
-    particleStateBufferB,
-    particleParametersBuffer,
-    particleEmitterBuffer,
-    particleRingCursorBuffer,
+    staticGeoInstanceCount: 0,
+    staticGeoInstanceOffset: 0,
+    cameraUB,
+    screenSpaceUB,
+    trailVB: initTrailVertexBuffer(device),
+    trailIDXB: initTrailIndexBuffer(device),
+    staticGeoIB: initInstanceBuffer(device),
+    particleDrawListSB,
+    particleDrawCountSB,
+    particleStateSBA,
+    particleStateSBB,
+    particleParametersUB,
+    particleEmitterSB,
+    particleRingCursorSB,
     particleShouldUseAB: false,
+    glyphIB,
+    glyphAtlasT,
+    glyphAtlasTV,
+    glyphAtlasSMP,
     meshes: {
       quad: {
         vertexBuffer: getQuadVertexBuffer(device),
@@ -425,9 +590,15 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
         vertexBufferLayoutId: "pos2D",
         instanceBufferLayoutId: "transform2D",
       },
+      glyphQuad: {
+        vertexBuffer: getGlyphQuadVertexBuffer(device),
+        indexBuffer: getGlyphQuadIndexBuffer(device),
+        vertexBufferLayoutId: "textGlyph",
+        instanceBufferLayoutId: "textGlyphInstance",
+      },
     },
     renderPipelines: {
-      transform2D: get2DTransformPipeline(
+      worldTF2D: get2DTransformPipeline(
         device,
         format,
         bindGroups,
@@ -447,6 +618,14 @@ export function initRenderer(device: GPUDevice, format: GPUTextureFormat) {
         format,
         bindGroups,
         shaders
+      ),
+      text: getTextPipeline(
+        device,
+        format,
+        bindGroups,
+        shaders,
+        vertexBufferLayouts,
+        instanceBufferLayouts
       ),
     },
     computePipelines: {
@@ -504,16 +683,16 @@ export function updateTransformColorGPUData(
   }
 
   device.queue.writeBuffer(
-    renderer.instanceBuffer,
-    renderer.instanceOffset,
+    renderer.staticGeoIB,
+    renderer.staticGeoInstanceOffset,
     result.buffer,
     0,
     result.byteLength
   );
-  renderer.instanceOffset += result.byteLength;
+  renderer.staticGeoInstanceOffset += result.byteLength;
 
-  const firstInstance = renderer.instanceCount;
-  renderer.instanceCount += entityIds.length;
+  const firstInstance = renderer.staticGeoInstanceCount;
+  renderer.staticGeoInstanceCount += entityIds.length;
 
   return firstInstance;
 }
@@ -543,6 +722,13 @@ function getShaderParticleRender(device: GPUDevice) {
   return device.createShaderModule({
     label: "draw particles",
     code: particleRenderCode,
+  });
+}
+
+function getShaderText(device: GPUDevice) {
+  return device.createShaderModule({
+    label: "draw text",
+    code: textCode,
   });
 }
 
@@ -625,8 +811,8 @@ export function emitTrailVertices(device: GPUDevice) {
     }
   }
 
-  device.queue.writeBuffer(renderer.trailVertexBuffer, 0, vertices);
-  device.queue.writeBuffer(renderer.trailInstanceBuffer, 0, indices);
+  device.queue.writeBuffer(renderer.trailVB, 0, vertices);
+  device.queue.writeBuffer(renderer.trailIDXB, 0, indices);
 }
 
 export function renderTrails() {
@@ -647,7 +833,7 @@ export function renderTrails() {
 export function setupParticleRendering(device: GPUDevice) {
   const zeroBuff = new Uint32Array(1);
   zeroBuff[0] = 0;
-  device.queue.writeBuffer(renderer.particleDrawCountBuffer, 0, zeroBuff);
+  device.queue.writeBuffer(renderer.particleDrawCountSB, 0, zeroBuff);
 
   const EMITTER_STRIDE = 112;
   const emitterData = new ArrayBuffer(EMITTER_STRIDE * 500);
@@ -689,7 +875,7 @@ export function setupParticleRendering(device: GPUDevice) {
     base += pd.count[i];
   }
 
-  device.queue.writeBuffer(renderer.particleEmitterBuffer, 0, emitterData);
+  device.queue.writeBuffer(renderer.particleEmitterSB, 0, emitterData);
 
   const paramsBuffer = new ArrayBuffer(20);
   const paramDv = new DataView(paramsBuffer);
@@ -705,7 +891,20 @@ export function setupParticleRendering(device: GPUDevice) {
   paramDv.setUint32(12, Math.floor(state.time.now % 10000), true);
   paramDv.setFloat32(16, state.time.deltaTime, true);
 
-  device.queue.writeBuffer(renderer.particleParametersBuffer, 0, paramsBuffer);
+  device.queue.writeBuffer(renderer.particleParametersUB, 0, paramsBuffer);
+}
+
+export function updateScreenSpace(device: GPUDevice) {
+  // Screen space: origin at top-left, +X right, +Y down
+  // Maps [0, canvas.width]x[0, canvas.height] to NDC [-1,1]x[1,-1]
+  const vpMatrix = mat4.create();
+  mat4.orthoZO(vpMatrix, 0, state.canvas.width, state.canvas.height, 0, -1, 1);
+
+  device.queue.writeBuffer(
+    renderer.screenSpaceUB,
+    0,
+    (vpMatrix as Float32Array).buffer
+  );
 }
 
 // Mouse pos is from last frame when doing gameplay
@@ -727,7 +926,7 @@ export function updateCamAndMouse(device: GPUDevice) {
   mat4.multiply(vpMatrix, vpMatrix, vMatrix);
 
   device.queue.writeBuffer(
-    renderer.cameraBuffer,
+    renderer.cameraUB,
     0,
     (vpMatrix as Float32Array).buffer
   );
