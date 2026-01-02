@@ -37,6 +37,8 @@ import { mat4, vec4 } from "gl-matrix";
 export type Renderer = {
   staticGeoInstanceCount: number;
   staticGeoInstanceOffset: number;
+  glyphInstanceCount: number;
+  glyphInstanceOffset: number;
   cameraUB: GPUBuffer;
   screenSpaceUB: GPUBuffer;
   trailVB: GPUBuffer;
@@ -149,7 +151,7 @@ const vertexBufferLayouts: { [k: string]: GPUVertexBufferLayout } = {
     stepMode: "vertex",
     attributes: [
       {
-        shaderLocation: 2, // vpos
+        shaderLocation: 5, // vpos
         offset: 0,
         format: "float32x2",
       },
@@ -188,7 +190,7 @@ const instanceBufferLayouts: { [k: string]: GPUVertexBufferLayout } = {
     ],
   },
   textGlyphInstance: {
-    arrayStride: 10 * 4, // 40 bytes: color(4) + uvOffset(2) + pos(2) + scale(1) + padding(1)
+    arrayStride: 12 * 4, // 48 bytes: color(4) + uvMin(2) + uvMax(2) + pos(2) + scale(1) + padding(1)
     stepMode: "instance",
     attributes: [
       {
@@ -197,18 +199,23 @@ const instanceBufferLayouts: { [k: string]: GPUVertexBufferLayout } = {
         format: "float32x4",
       },
       {
-        shaderLocation: 1, // uvOffset
+        shaderLocation: 1, // uvMin
         offset: 4 * 4,
         format: "float32x2",
       },
       {
-        shaderLocation: 3, // pos
+        shaderLocation: 2, // uvMax
         offset: 6 * 4,
         format: "float32x2",
       },
       {
-        shaderLocation: 4, // scale
+        shaderLocation: 3, // pos
         offset: 8 * 4,
+        format: "float32x2",
+      },
+      {
+        shaderLocation: 4, // scale
+        offset: 10 * 4,
         format: "float32",
       },
     ],
@@ -389,14 +396,15 @@ function initScreenSpaceBuffer(device: GPUDevice) {
 }
 
 function initGlyphInstanceBuffer(device: GPUDevice) {
-  // Per instance (10 floats = 40 bytes):
+  // Per instance (12 floats = 48 bytes):
   // color: vec4<f32> (4 floats)
-  // uvOffset: vec2<f32> (2 floats)
+  // uvMin: vec2<f32> (2 floats)
+  // uvMax: vec2<f32> (2 floats)
   // pos: vec2<f32> (2 floats)
   // scale: f32 (1 float)
   // padding: f32 (1 float)
   return device.createBuffer({
-    size: 10 * 4 * 1000,
+    size: 12 * 4 * 1000,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
   });
 }
@@ -560,6 +568,8 @@ export async function initRenderer(
   renderer = {
     staticGeoInstanceCount: 0,
     staticGeoInstanceOffset: 0,
+    glyphInstanceCount: 0,
+    glyphInstanceOffset: 0,
     cameraUB,
     screenSpaceUB,
     trailVB: initTrailVertexBuffer(device),

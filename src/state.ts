@@ -71,6 +71,15 @@ export type Text = {
   anchor: TextAnchor;
 };
 
+export type WorldText = {
+  x: number;
+  y: number;
+  scale: number;
+  content: string;
+  color: keyof typeof colors;
+  align: TextAlign;
+};
+
 export type BaseEntity = {
   entityId: number;
 
@@ -285,7 +294,7 @@ export const state = {
     colorFinalB: 0,
     colorFinalA: 0,
   }),
-  texts: makeSoA<Text>(100, {
+  uiTexts: makeSoA<Text>(100, {
     x: 0,
     y: 0,
     scale: 0,
@@ -293,6 +302,14 @@ export const state = {
     color: "boid",
     align: TextAlign.Left,
     anchor: TextAnchor.TopLeft,
+  }),
+  worldTexts: makeSoA<WorldText>(100, {
+    x: 0,
+    y: 0,
+    scale: 0,
+    content: "",
+    color: "boid",
+    align: TextAlign.Left,
   }),
   colors,
   collisions: new Array<Collision>(),
@@ -329,6 +346,8 @@ export const state = {
   canvas: {
     width: 0,
     height: 0,
+    widthRaw: 0,
+    heightRaw: 0,
   },
   scoreBoardIdx: 0,
   score: 0,

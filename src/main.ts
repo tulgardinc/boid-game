@@ -20,7 +20,12 @@ import {
 } from "./renderer";
 import { renderBoids } from "./meshes/boid";
 import { renderTexturedQuads } from "./meshes/quad";
-import { setupTextRendering, getGlyphCount } from "./meshes/glyphQuad";
+import {
+  setupTextRendering,
+  getGlyphCount,
+  setupWorldTextRendering,
+  getWorldGlyphCount,
+} from "./meshes/glyphQuad";
 import { updateBoids, updateBoidTrails } from "./boid";
 import { detectCollisionsOBB, handleCollisions, physicsUpdate } from "./util";
 import { updateHealthBars } from "./healthbar";
@@ -84,14 +89,13 @@ async function main() {
     },
   };
 
-  state.scoreBoardIdx = appendSoA(state.texts, {
+  state.scoreBoardIdx = appendSoA(state.worldTexts, {
     x: 0,
-    y: 70,
+    y: 0,
     scale: 70,
     color: "boid",
     content: "",
     align: TextAlign.Right,
-    anchor: TextAnchor.TopRight,
   });
 
   function render() {
@@ -103,7 +107,11 @@ async function main() {
     updateHealthBars();
     updateBoids();
 
-    state.texts.data.content[state.scoreBoardIdx] = state.score.toString();
+    state.worldTexts.data.content[state.scoreBoardIdx] = state.score.toString();
+    state.worldTexts.data.x[state.scoreBoardIdx] =
+      (canvas.width * 1) / state.camera.zoom / 2 - 20;
+    state.worldTexts.data.y[state.scoreBoardIdx] =
+      (canvas.height * 1) / state.camera.zoom / 2 - 70;
 
     // deletetions
     deleteScheduledEntities();
@@ -126,7 +134,8 @@ async function main() {
     // send particle data
     setupParticleRendering(device);
 
-    // send text data
+    // send text data (order must match rendering order)
+    setupWorldTextRendering(device);
     setupTextRendering(device);
 
     // renderer
@@ -220,7 +229,22 @@ async function main() {
     const VERRICES_PER_PARTICLE = 6;
     renderPass.draw(MAX_PARTICLE_COUNT * VERRICES_PER_PARTICLE);
 
-    // Render text
+    // Render world text (uses camera bind group)
+    const worldGlyphCount = getWorldGlyphCount();
+    if (worldGlyphCount > 0) {
+      renderPass.setPipeline(renderer.renderPipelines.text);
+      renderPass.setBindGroup(0, renderer.bindGroups.camera.group);
+      renderPass.setBindGroup(1, renderer.bindGroups.textAtlas.group);
+      renderPass.setVertexBuffer(0, renderer.meshes.glyphQuad.vertexBuffer);
+      renderPass.setVertexBuffer(1, renderer.glyphIB);
+      renderPass.setIndexBuffer(
+        renderer.meshes.glyphQuad.indexBuffer,
+        "uint16"
+      );
+      renderPass.drawIndexed(6, worldGlyphCount, 0, 0, 0);
+    }
+
+    // Render UI text (uses screen space bind group)
     const glyphCount = getGlyphCount();
     if (glyphCount > 0) {
       renderPass.setPipeline(renderer.renderPipelines.text);
@@ -232,7 +256,8 @@ async function main() {
         renderer.meshes.glyphQuad.indexBuffer,
         "uint16"
       );
-      renderPass.drawIndexed(6, glyphCount, 0, 0, 0);
+      // Start at instance worldGlyphCount since UI text data follows world text in buffer
+      renderPass.drawIndexed(6, glyphCount, 0, 0, worldGlyphCount);
     }
 
     renderPass.end();
@@ -241,6 +266,8 @@ async function main() {
 
     renderer.staticGeoInstanceOffset = 0;
     renderer.staticGeoInstanceCount = 0;
+    renderer.glyphInstanceOffset = 0;
+    renderer.glyphInstanceCount = 0;
     renderer.renderQueue.length = 0;
 
     renderer.particleShouldUseAB = !renderer.particleShouldUseAB;

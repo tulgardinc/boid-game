@@ -8,18 +8,15 @@ var atlasTex: texture_2d<f32>;
 @group(1) @binding(1)
 var atlasSmp: sampler;
 
-// Glyph size in UV coordinates (60px/1024px, 100px/1024px)
-const GLYPH_UV_SIZE: vec2<f32> = vec2<f32>(60.0/1024.0, 100.0/1024.0);
-// const GLYPH_UV_SIZE: vec2<f32> = vec2<f32>(1,1);
-
 struct VertexInput {
   // Instance data
   @location(0) color: vec4<f32>,
-  @location(1) uvOffset: vec2<f32>,
+  @location(1) uvMin: vec2<f32>,
+  @location(2) uvMax: vec2<f32>,
   @location(3) pos: vec2<f32>,
   @location(4) scale: f32,
   // Vertex data
-  @location(2) vpos: vec2<f32>,
+  @location(5) vpos: vec2<f32>,
 };
 
 struct VertexOutput {
@@ -37,9 +34,10 @@ struct VertexOutput {
   output.position = vpMatrix * vec4f(world, 0.0f, 1.0f);
   output.color = input.color;
   
-  // Calculate UV: vpos goes from -0.5 to 0.5, convert to 0-1 range and scale by glyph size
-  let localUV = vec2<f32>(input.vpos.x + 0.5, input.vpos.y + 0.5); // Flip Y
-  output.uv = input.uvOffset + localUV * GLYPH_UV_SIZE;
+  // Interpolate UV between uvMin and uvMax based on vertex position
+  // vpos goes from -0.5 to 0.5, convert to 0-1 range for interpolation
+  let t = input.vpos + 0.5;
+  output.uv = mix(input.uvMin, input.uvMax, t);
   
   return output;
 }
