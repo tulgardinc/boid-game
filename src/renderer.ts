@@ -19,7 +19,7 @@ import {
   getTextPipeline,
   getTrailPipeline,
 } from "./pipelines";
-import { MAX_TRAIL_LENGTH, state } from "./state";
+import { state } from "./state";
 import {
   getCameraBindGroup,
   getCameraBindGroupLayout,
@@ -33,6 +33,15 @@ import {
   getTextAtlasBindGroupLayout,
 } from "./uniforms";
 import { mat4, vec4 } from "gl-matrix";
+import {
+  MAX_TRAIL_LENGTH,
+  MAX_PARTICLE_COUNT,
+  VERTICES_PER_PARTICLE,
+  PARTICLE_COMPUTE_WORKGROUP_SIZE,
+  TRAIL_VISUAL_WIDTH,
+  DEFAULT_CANVAS_WIDTH,
+  DEFAULT_CANVAS_HEIGHT,
+} from "./constants";
 
 export type Renderer = {
   staticGeoInstanceCount: number;
@@ -245,8 +254,6 @@ function initTrailIndexBuffer(device: GPUDevice) {
   });
 }
 
-export const MAX_PARTICLE_COUNT = 10000;
-
 function initParticleDrawListBuffer(device: GPUDevice) {
   // uint32
   const data = new Uint32Array(MAX_PARTICLE_COUNT);
@@ -365,7 +372,15 @@ function initParticleRingCursorBuffer(device: GPUDevice) {
 
 function initCameraBuffer(device: GPUDevice) {
   const vpMatrix = mat4.create();
-  mat4.orthoZO(vpMatrix, -1920 / 2, 1920 / 2, -1080 / 2, 1080 / 2, -1, 1);
+  mat4.orthoZO(
+    vpMatrix,
+    -DEFAULT_CANVAS_WIDTH / 2,
+    DEFAULT_CANVAS_WIDTH / 2,
+    -DEFAULT_CANVAS_HEIGHT / 2,
+    DEFAULT_CANVAS_HEIGHT / 2,
+    -1,
+    1
+  );
 
   const buffer = device.createBuffer({
     label: "camera buffer",
@@ -380,9 +395,17 @@ function initCameraBuffer(device: GPUDevice) {
 
 function initScreenSpaceBuffer(device: GPUDevice) {
   // Screen space: origin at top-left, +X right, +Y down
-  // For a 1920x1080 canvas, this maps [0,1920]x[0,1080] to NDC [-1,1]x[1,-1]
+  // For default canvas size, this maps [0,width]x[0,height] to NDC [-1,1]x[1,-1]
   const vpMatrix = mat4.create();
-  mat4.orthoZO(vpMatrix, 0, 1920, 1080, 0, -1, 1);
+  mat4.orthoZO(
+    vpMatrix,
+    0,
+    DEFAULT_CANVAS_WIDTH,
+    DEFAULT_CANVAS_HEIGHT,
+    0,
+    -1,
+    1
+  );
 
   const buffer = device.createBuffer({
     label: "screen space buffer",
@@ -743,8 +766,6 @@ function getShaderText(device: GPUDevice) {
 }
 
 export function emitTrailVertices(device: GPUDevice) {
-  const WIDTH = 6;
-
   const vertexCount = state.trails.data.length.reduce(
     (prev, cur) => prev + cur,
     0
@@ -792,10 +813,10 @@ export function emitTrailVertices(device: GPUDevice) {
       const rightX = dirNormY;
       const rightY = -dirNormX;
 
-      const pLeftX = px + (leftX * WIDTH) / 2;
-      const pLeftY = py + (leftY * WIDTH) / 2;
-      const pRightX = px + (rightX * WIDTH) / 2;
-      const pRightY = py + (rightY * WIDTH) / 2;
+      const pLeftX = px + (leftX * TRAIL_VISUAL_WIDTH) / 2;
+      const pLeftY = py + (leftY * TRAIL_VISUAL_WIDTH) / 2;
+      const pRightX = px + (rightX * TRAIL_VISUAL_WIDTH) / 2;
+      const pRightY = py + (rightY * TRAIL_VISUAL_WIDTH) / 2;
 
       vertices[vertexIndex++] = pLeftX; // x
       vertices[vertexIndex++] = pLeftY; // y

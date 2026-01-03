@@ -11,13 +11,19 @@ import { asteroidUpdate } from "./asteroid";
 import {
   emitTrailVertices,
   initRenderer,
-  MAX_PARTICLE_COUNT,
   renderer,
   renderTrails,
   setupParticleRendering,
   updateCamAndMouse,
   updateScreenSpace,
 } from "./renderer";
+import {
+  MAX_PARTICLE_COUNT,
+  VERTICES_PER_PARTICLE,
+  PARTICLE_COMPUTE_WORKGROUP_SIZE,
+  DEFAULT_CANVAS_WIDTH,
+  DEFAULT_CANVAS_HEIGHT,
+} from "./constants";
 import { renderBoids } from "./meshes/boid";
 import { renderTexturedQuads } from "./meshes/quad";
 import {
@@ -33,7 +39,7 @@ import { cameraUpdate } from "./camera";
 import { appendSoA } from "./SoA";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-    <canvas width="1920" height="1080" id="canvas"></canvas>
+    <canvas width="${DEFAULT_CANVAS_WIDTH}" height="${DEFAULT_CANVAS_HEIGHT}" id="canvas"></canvas>
 `;
 
 export const canvas = document.querySelector("canvas")!;
@@ -167,12 +173,16 @@ async function main() {
 
     computePass.setPipeline(renderer.computePipelines.particleSpawn);
     computePass.setBindGroup(0, particleComputeBG);
-    const wgSpawnCount = Math.ceil(totalParticlesToSpawn / 256);
+    const wgSpawnCount = Math.ceil(
+      totalParticlesToSpawn / PARTICLE_COMPUTE_WORKGROUP_SIZE
+    );
     computePass.dispatchWorkgroups(wgSpawnCount, 1, 1);
 
     computePass.setPipeline(renderer.computePipelines.particleState);
     computePass.setBindGroup(0, particleComputeBG);
-    const wgUpdateCount = Math.ceil(MAX_PARTICLE_COUNT / 256);
+    const wgUpdateCount = Math.ceil(
+      MAX_PARTICLE_COUNT / PARTICLE_COMPUTE_WORKGROUP_SIZE
+    );
     computePass.dispatchWorkgroups(wgUpdateCount, 1, 1);
 
     computePass.setPipeline(renderer.computePipelines.particleDrawList);
@@ -226,8 +236,7 @@ async function main() {
     renderPass.setPipeline(renderer.renderPipelines.particleRender);
     renderPass.setBindGroup(0, particleRenderBG);
     renderPass.setBindGroup(1, renderer.bindGroups.camera.group);
-    const VERRICES_PER_PARTICLE = 6;
-    renderPass.draw(MAX_PARTICLE_COUNT * VERRICES_PER_PARTICLE);
+    renderPass.draw(MAX_PARTICLE_COUNT * VERTICES_PER_PARTICLE);
 
     // Render world text (uses camera bind group)
     const worldGlyphCount = getWorldGlyphCount();

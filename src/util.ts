@@ -1,15 +1,23 @@
+import { spawnAsteroidDeathParticles } from "./asteroid";
+import { appendSoA, swapDeleteSoA } from "./SoA";
+import { EntityType, state } from "./state";
 import {
+  HURT_COOLDOWN_DURATION,
+  BOID_DAMAGE,
+  COLLISION_SPEED_THRESHOLD,
+  CAMERA_SHAKE_MULTIPLIER,
   ASTEROID_DAMAGE_COLOR_DURATION,
   ASTEROID_HIT_SCALE,
   ASTEROID_SHRINK_DURATION,
   ASTEROID_STOP_DURATION,
-  spawnAsteroidDeathParticles,
-} from "./asteroid";
-import { BOID_DAMAGE } from "./boid";
-import { appendSoA, swapDeleteSoA } from "./SoA";
-import { EntityType, state } from "./state";
+} from "./constants";
 
-export const HURT_COOLDOWN_DURATION = 0.5;
+// Collision response constants
+const KNOCKBACK_FORCE_NORMAL = 1000;
+const KNOCKBACK_FORCE_DEATH = 1500;
+const CAMERA_ROTATION_IMPULSE = 0.3;
+const ASTEROID_ROTATION_ON_HIT = 10;
+const ROT_IMPULSE = 200;
 
 export function addHurtCooldown(
   asteroidId: number,
@@ -208,7 +216,7 @@ export function handleCollisions() {
 
     if (state.asteroids.data.health[astrIdx] <= 0) continue;
 
-    if (speed > 500) {
+    if (speed > COLLISION_SPEED_THRESHOLD) {
       state.asteroids.data.health[astrIdx] -= BOID_DAMAGE;
 
       state.asteroids.data.damageColorExpiry[astrIdx] =
@@ -232,15 +240,17 @@ export function handleCollisions() {
         : collision.vector;
 
       const knockForce =
-        state.asteroids.data.health[astrIdx] <= 0 ? 1500 : 1000;
+        state.asteroids.data.health[astrIdx] <= 0
+          ? KNOCKBACK_FORCE_DEATH
+          : KNOCKBACK_FORCE_NORMAL;
 
       state.asteroids.data.knockbackVelX[astrIdx] =
         colVecForAstr.x * knockForce;
       state.asteroids.data.knockbackVelY[astrIdx] =
         colVecForAstr.y * knockForce;
 
-      state.camera.x += colVecForAstr.x * 15;
-      state.camera.y += colVecForAstr.y * 15;
+      state.camera.x += colVecForAstr.x * CAMERA_SHAKE_MULTIPLIER;
+      state.camera.y += colVecForAstr.y * CAMERA_SHAKE_MULTIPLIER;
 
       const astrUp = getEntityUp(astrBaseIdx);
       const astrRight = getEntityRight(astrBaseIdx);
@@ -263,11 +273,9 @@ export function handleCollisions() {
         leverX * colVecForAstr.y - leverY * colVecForAstr.x
       );
 
-      const ROT_IMPULSE = 200;
-
       state.asteroids.data.knockbackVelRDelta[astrIdx] += rotSign * ROT_IMPULSE;
-      d.r[astrBaseIdx] += rotSign * 10;
-      state.camera.r += rotSign * 0.3;
+      d.r[astrBaseIdx] += rotSign * ASTEROID_ROTATION_ON_HIT;
+      state.camera.r += rotSign * CAMERA_ROTATION_IMPULSE;
 
       addHurtCooldown(
         asteroidId,

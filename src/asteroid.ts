@@ -9,22 +9,19 @@ import {
   state,
 } from "./state";
 import { easeOutCubic, moveTowardsArrive, removeHurtCooldown } from "./util";
-
-export const ASTEROID_HIT_SCALE = 0.8;
-export const ASTEROID_SHRINK_DURATION = 0.15;
-export const ASTEROID_DAMAGE_COLOR_DURATION = 0.1;
-export const ASTEROID_STOP_DURATION = 0.1;
-export const ASTEROID_KNOCKBACK_RECOVERY_DURATION = 0.4;
-export const ASTEROID_DEATH_DELAY = 0.15;
-export const ASTEROID_HEALTH = 100;
-export const ASTEROID_MAX_VEL_R = 90;
-export const ASTEROID_RETURN_VEL_R_SPEED = 150;
-
-const MAX_SCALE = 250;
-const MIN_SCALE = 150;
-
-const MAX_SPEED = 120;
-const MIN_SPEED = 100;
+import {
+  ASTEROID_HEALTH,
+  ASTEROID_MAX_SCALE,
+  ASTEROID_MIN_SCALE,
+  ASTEROID_MAX_SPEED,
+  ASTEROID_MIN_SPEED,
+  ASTEROID_DEATH_DELAY,
+  ASTEROID_SHRINK_DURATION,
+  ASTEROID_HIT_SCALE,
+  ASTEROID_KNOCKBACK_RECOVERY_DURATION,
+  ASTEROID_MAX_VEL_R,
+  ASTEROID_RETURN_VEL_R_SPEED,
+} from "./constants";
 
 function randomStep() {
   return Math.random() > 0.5 ? 1 : -1;
@@ -34,21 +31,27 @@ function createAsteroid() {
   let spawnY;
 
   if (randomStep() == 1) {
-    spawnX = randomStep() * (1920 / 2 + MAX_SCALE);
-    spawnY = randomStep() * (Math.random() - 0.5) * (1080 + MAX_SCALE * 2);
+    spawnX = randomStep() * (1920 / 2 + ASTEROID_MAX_SCALE);
+    spawnY =
+      randomStep() * (Math.random() - 0.5) * (1080 + ASTEROID_MAX_SCALE * 2);
   } else {
-    spawnX = randomStep() * (Math.random() - 0.5) * (1920 + MAX_SCALE * 2);
-    spawnY = randomStep() * (1080 / 2 + MAX_SCALE);
+    spawnX =
+      randomStep() * (Math.random() - 0.5) * (1920 + ASTEROID_MAX_SCALE * 2);
+    spawnY = randomStep() * (1080 / 2 + ASTEROID_MAX_SCALE);
   }
 
-  const scale = Math.random() * (MAX_SCALE - MIN_SCALE) + MIN_SCALE;
+  const scale =
+    Math.random() * (ASTEROID_MAX_SCALE - ASTEROID_MIN_SCALE) +
+    ASTEROID_MIN_SCALE;
 
   const velX =
     -(Math.abs(spawnX) / spawnX) *
-    (Math.random() * (MAX_SPEED - MIN_SPEED) + MIN_SPEED);
+    (Math.random() * (ASTEROID_MAX_SPEED - ASTEROID_MIN_SPEED) +
+      ASTEROID_MIN_SPEED);
   const velY =
     -(Math.abs(spawnY) / spawnY) *
-    (Math.random() * (MAX_SPEED - MIN_SPEED) + MIN_SPEED);
+    (Math.random() * (ASTEROID_MAX_SPEED - ASTEROID_MIN_SPEED) +
+      ASTEROID_MIN_SPEED);
   const velR = randomStep() * Math.random() * (50 - 10) + 10;
 
   const { baseIdx, entityId } = addBaseEntity({
@@ -195,8 +198,8 @@ export function asteroidUpdate() {
     }
 
     if (
-      Math.abs(d.x[baseIdx]) > 1920 / 2 + MAX_SCALE ||
-      Math.abs(d.y[baseIdx]) > 1080 / 2 + MAX_SCALE
+      Math.abs(d.x[baseIdx]) > 1920 / 2 + ASTEROID_MAX_SCALE ||
+      Math.abs(d.y[baseIdx]) > 1080 / 2 + ASTEROID_MAX_SCALE
     ) {
       scheduleAsteroidForDelete(d.entityId[baseIdx]);
       continue;

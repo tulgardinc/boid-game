@@ -3,6 +3,7 @@ import { boidInit } from "./boid";
 import { Color } from "./color";
 import { canvas } from "./main";
 import { appendSoA, makeSoA, swapDeleteSoA } from "./SoA";
+import { MAX_TRAIL_LENGTH } from "./constants";
 
 export type Collision = {
   entityABaseIdx: number;
@@ -178,8 +179,6 @@ export type ParticleEmitter = {
   colorFinalB: number;
   colorFinalA: number;
 };
-
-export const MAX_TRAIL_LENGTH = 50;
 
 const colors = {
   boid: { r: 1, g: 1, b: 1 },

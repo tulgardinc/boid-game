@@ -1,5 +1,17 @@
 import { renderer } from "../renderer";
 import { state, TextAlign, TextAnchor } from "../state";
+import {
+  ATLAS_SIZE,
+  GLYPH_WIDTH,
+  GLYPH_HEIGHT,
+  GLYPHS_PER_ROW,
+  GLYPH_UV_WIDTH,
+  GLYPH_UV_HEIGHT,
+  FIRST_CHAR_CODE,
+  GLYPH_SPACING,
+  TEXT_INSTANCE_STRIDE,
+  GLYPH_ASPECT_RATIO,
+} from "../constants";
 
 // prettier-ignore
 const vertices = new Float32Array([
@@ -36,19 +48,6 @@ export function getGlyphQuadIndexBuffer(device: GPUDevice): GPUBuffer {
   return indexBuffer;
 }
 
-// Font atlas constants
-const ATLAS_SIZE = 1024;
-const GLYPH_WIDTH = 64;
-const GLYPH_HEIGHT = 100;
-const GLYPHS_PER_ROW = Math.floor(ATLAS_SIZE / GLYPH_WIDTH); // 17
-const GLYPH_UV_WIDTH = 64 / 1024;
-const GLYPH_UV_HEIGHT = 100 / 1024;
-const FIRST_CHAR_CODE = 32; // Space character " "
-const GLYPH_SPACING = 0.8; // Multiplier for distance between glyphs (1.0 = no extra spacing)
-
-// Instance stride in floats: color(4) + uvMin(2) + uvMax(2) + pos(2) + scale(1) + padding(1) = 12
-const INSTANCE_STRIDE = 12;
-
 /**
  * Dynamically calculates the total number of glyphs across all texts.
  */
@@ -76,7 +75,7 @@ export function setupTextRendering(device: GPUDevice): void {
     return;
   }
 
-  const instanceData = new Float32Array(totalGlyphs * INSTANCE_STRIDE);
+  const instanceData = new Float32Array(totalGlyphs * TEXT_INSTANCE_STRIDE);
   let offset = 0;
 
   for (let i = 0; i < state.uiTexts.len; i++) {
@@ -136,8 +135,8 @@ export function setupTextRendering(device: GPUDevice): void {
     const baseX = anchorX + offsetX;
     const baseY = anchorY + offsetY;
 
-    // Character width in world units (scale * aspect ratio 0.6)
-    const charWorldWidth = scale * 0.6;
+    // Character width in world units (scale * aspect ratio)
+    const charWorldWidth = scale * GLYPH_ASPECT_RATIO;
     const charSpacing = charWorldWidth * GLYPH_SPACING;
     const totalWidth = content.length * charSpacing;
 
@@ -221,7 +220,7 @@ export function setupWorldTextRendering(device: GPUDevice): void {
     return;
   }
 
-  const instanceData = new Float32Array(totalGlyphs * INSTANCE_STRIDE);
+  const instanceData = new Float32Array(totalGlyphs * TEXT_INSTANCE_STRIDE);
   let offset = 0;
 
   for (let i = 0; i < state.worldTexts.len; i++) {
@@ -233,8 +232,8 @@ export function setupWorldTextRendering(device: GPUDevice): void {
     const colorKey = state.worldTexts.data.color[i];
     const color = state.colors[colorKey];
 
-    // Character width in world units (scale * aspect ratio 0.6)
-    const charWorldWidth = scale * 0.6;
+    // Character width in world units (scale * aspect ratio)
+    const charWorldWidth = scale * GLYPH_ASPECT_RATIO;
     const charSpacing = charWorldWidth * GLYPH_SPACING;
     const totalWidth = content.length * charSpacing;
 

@@ -4,21 +4,19 @@ import {
   addTrailPoint,
   createNewTrail,
   EntityType,
-  MAX_TRAIL_LENGTH,
   state,
 } from "./state";
 import { angleDiff } from "./util";
-
-export const BOID_DAMAGE = 20;
+import {
+  BOID_THRUST_FORCE,
+  BOID_SIDE_FRICTION,
+  BOID_BACK_FRICTION,
+  MAX_TRAIL_LENGTH,
+} from "./constants";
 
 // PID Controller constants
 const ROTATION_KP = 28;
 const ROTATION_KD = 8;
-
-// Movement constants
-const THRUST_FORCE = 550;
-const SIDE_FRICTION = 10;
-const BACK_FRICTION = 14;
 
 // Separation behavior constants
 const PUSH_DISTANCE = 50;
@@ -96,12 +94,12 @@ export function updateBoids() {
     const vForward = d.velX[baseIdx] * fwdx + d.velY[baseIdx] * fwdy;
     const vSide = d.velX[baseIdx] * sidex + d.velY[baseIdx] * sidey;
 
-    const axThrust = fwdx * THRUST_FORCE;
-    const ayThrust = fwdy * THRUST_FORCE;
+    const axThrust = fwdx * BOID_THRUST_FORCE;
+    const ayThrust = fwdy * BOID_THRUST_FORCE;
 
-    const sideForce = -vSide * SIDE_FRICTION;
+    const sideForce = -vSide * BOID_SIDE_FRICTION;
 
-    const longFricCoeff = vForward > 0 ? 0 : BACK_FRICTION;
+    const longFricCoeff = vForward > 0 ? 0 : BOID_BACK_FRICTION;
     const longForce = -vForward * longFricCoeff;
 
     const axSide = sideForce * sidex;

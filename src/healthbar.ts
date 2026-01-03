@@ -6,6 +6,8 @@ const OUTER_WIDTH = 150;
 const INNER_MAX_WIDTH = 148;
 const VERTICAL_OFFSET = 150;
 const TRANSITION_HALFLIFE = 0.08;
+const INNER_HEIGHT = 12;
+const OUTER_HEIGHT = 18;
 
 export function createHealthBar(
   pos: { x: number; y: number },
@@ -19,7 +21,7 @@ export function createHealthBar(
     r: 0,
 
     scaleX: INNER_MAX_WIDTH,
-    scaleY: 12,
+    scaleY: INNER_HEIGHT,
 
     velX: 0,
     velY: 0,
@@ -51,7 +53,7 @@ export function createHealthBar(
       r: 0,
 
       scaleX: INNER_MAX_WIDTH,
-      scaleY: 12,
+      scaleY: INNER_HEIGHT,
 
       velX: 0,
       velY: 0,
@@ -82,7 +84,7 @@ export function createHealthBar(
     r: 0,
 
     scaleX: OUTER_WIDTH,
-    scaleY: 18,
+    scaleY: OUTER_HEIGHT,
 
     velX: 0,
     velY: 0,
