@@ -194,8 +194,8 @@ export function getTextPipeline(
       entryPoint: "vs",
       module: shaders.text,
       buffers: [
-        vertexBufferLayouts.textGlyph,
-        instanceBufferLayouts.textGlyphInstance,
+        vertexBufferLayouts.atlasQuad,
+        instanceBufferLayouts.atlasQuadInstance,
       ],
     },
     fragment: {

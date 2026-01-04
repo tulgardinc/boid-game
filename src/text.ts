@@ -1,54 +1,19 @@
-import { renderer } from "../renderer";
-import { state, TextAlign, TextAnchor } from "../state";
+import { renderer } from "./renderer";
+import { state, TextAlign, TextAnchor } from "./state";
 import {
   ATLAS_SIZE,
   GLYPH_WIDTH,
   GLYPH_HEIGHT,
   FIRST_CHAR_CODE,
   GLYPH_SPACING,
-} from "../constants";
-
-// prettier-ignore
-const vertices = new Float32Array([
-  // vpos.x, vpos.y (UV is computed in shader from instance uvOffset)
-  -0.5, -0.5,  // bottom-left
-   0.5, -0.5,  // bottom-right
-  -0.5,  0.5,  // top-left
-   0.5,  0.5,  // top-right
-]);
-
-// prettier-ignore
-const indices = new Uint16Array([
-  0, 1, 2,
-  2, 1, 3,
-]);
+} from "./constants";
+import { ATLAS_INSTANCE_STRIDE } from "./meshes/quad";
 
 const GLYPHS_PER_ROW = Math.floor(ATLAS_SIZE / GLYPH_WIDTH); // 16
 const GLYPH_UV_WIDTH = GLYPH_WIDTH / ATLAS_SIZE;
 const GLYPH_UV_HEIGHT = GLYPH_HEIGHT / ATLAS_SIZE;
 
 const GLYPH_ASPECT_RATIO = GLYPH_WIDTH / GLYPH_HEIGHT;
-const TEXT_INSTANCE_STRIDE = 12; // floats: color(4) + uvMin(2) + uvMax(2) + pos(2) + scale(1) + padding(1)
-
-export function getGlyphQuadVertexBuffer(device: GPUDevice) {
-  const vertexBuffer = device.createBuffer({
-    size: vertices.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-  });
-
-  device.queue.writeBuffer(vertexBuffer, 0, vertices.buffer);
-  return vertexBuffer;
-}
-
-export function getGlyphQuadIndexBuffer(device: GPUDevice): GPUBuffer {
-  const indexBuffer = device.createBuffer({
-    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-    size: indices.byteLength,
-  });
-
-  device.queue.writeBuffer(indexBuffer, 0, indices.buffer);
-  return indexBuffer;
-}
 
 /**
  * Dynamically calculates the total number of glyphs across all texts.
@@ -77,7 +42,7 @@ export function setupTextRendering(device: GPUDevice): void {
     return;
   }
 
-  const instanceData = new Float32Array(totalGlyphs * TEXT_INSTANCE_STRIDE);
+  const instanceData = new Float32Array(totalGlyphs * ATLAS_INSTANCE_STRIDE);
   let offset = 0;
 
   for (let i = 0; i < state.uiTexts.len; i++) {
@@ -186,12 +151,12 @@ export function setupTextRendering(device: GPUDevice): void {
   }
 
   device.queue.writeBuffer(
-    renderer.glyphIB,
-    renderer.glyphInstanceOffset,
+    renderer.atlasIB,
+    renderer.atlasInstanceOffset,
     instanceData
   );
-  renderer.glyphInstanceOffset += instanceData.byteLength;
-  renderer.glyphInstanceCount += totalGlyphs;
+  renderer.atlasInstanceOffset += instanceData.byteLength;
+  renderer.atlasInstanceCount += totalGlyphs;
 }
 
 /**
@@ -222,7 +187,7 @@ export function setupWorldTextRendering(device: GPUDevice): void {
     return;
   }
 
-  const instanceData = new Float32Array(totalGlyphs * TEXT_INSTANCE_STRIDE);
+  const instanceData = new Float32Array(totalGlyphs * ATLAS_INSTANCE_STRIDE);
   let offset = 0;
 
   for (let i = 0; i < state.worldTexts.len; i++) {
@@ -284,10 +249,10 @@ export function setupWorldTextRendering(device: GPUDevice): void {
   }
 
   device.queue.writeBuffer(
-    renderer.glyphIB,
-    renderer.glyphInstanceOffset,
+    renderer.atlasIB,
+    renderer.atlasInstanceOffset,
     instanceData
   );
-  renderer.glyphInstanceOffset += instanceData.byteLength;
-  renderer.glyphInstanceCount += totalGlyphs;
+  renderer.atlasInstanceOffset += instanceData.byteLength;
+  renderer.atlasInstanceCount += totalGlyphs;
 }

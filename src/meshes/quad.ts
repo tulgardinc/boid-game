@@ -15,6 +15,10 @@ const indices = new Uint16Array([
   2, 1, 3,
 ]);
 
+// Instance data stride for atlas quad rendering
+// floats: color(4) + uvMin(2) + uvMax(2) + pos(2) + scale(1) + padding(1)
+export const ATLAS_INSTANCE_STRIDE = 12;
+
 export function getQuadVertexBuffer(device: GPUDevice) {
   const vertexBuffer = device.createBuffer({
     size: vertices.byteLength,
@@ -35,7 +39,7 @@ export function getQuadIndexBuffer(device: GPUDevice): GPUBuffer {
   return indexBuffer;
 }
 
-export function renderTexturedQuads(device: GPUDevice) {
+export function renderColoredQuads(device: GPUDevice) {
   const quadBaseIdxs = [];
   for (let i = 0; i < state.asteroids.len; i++) {
     quadBaseIdxs.push(state.asteroids.data.baseIdx[i]);

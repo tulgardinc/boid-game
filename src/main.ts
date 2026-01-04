@@ -25,13 +25,13 @@ import {
   DEFAULT_CANVAS_HEIGHT,
 } from "./constants";
 import { renderBoids } from "./meshes/boid";
-import { renderTexturedQuads } from "./meshes/quad";
+import { renderColoredQuads } from "./meshes/quad";
 import {
   setupTextRendering,
   getGlyphCount,
   setupWorldTextRendering,
   getWorldGlyphCount,
-} from "./meshes/glyphQuad";
+} from "./text";
 import { updateBoids, updateBoidTrails } from "./boid";
 import {
   detectCollisionsOBB,
@@ -164,7 +164,7 @@ async function main() {
     updateCamAndMouse(device);
     renderTrails();
     renderBoids(device);
-    renderTexturedQuads(device);
+    renderColoredQuads(device);
 
     (
       renderPassDescriptor.colorAttachments as GPURenderPassColorAttachment[]
@@ -260,10 +260,10 @@ async function main() {
       renderPass.setPipeline(renderer.renderPipelines.text);
       renderPass.setBindGroup(0, renderer.bindGroups.camera.group);
       renderPass.setBindGroup(1, renderer.bindGroups.textAtlas.group);
-      renderPass.setVertexBuffer(0, renderer.meshes.glyphQuad.vertexBuffer);
-      renderPass.setVertexBuffer(1, renderer.glyphIB);
+      renderPass.setVertexBuffer(0, renderer.meshes.atlasQuad.vertexBuffer);
+      renderPass.setVertexBuffer(1, renderer.atlasIB);
       renderPass.setIndexBuffer(
-        renderer.meshes.glyphQuad.indexBuffer,
+        renderer.meshes.atlasQuad.indexBuffer,
         "uint16"
       );
       renderPass.drawIndexed(6, worldGlyphCount, 0, 0, 0);
@@ -275,10 +275,10 @@ async function main() {
       renderPass.setPipeline(renderer.renderPipelines.text);
       renderPass.setBindGroup(0, renderer.bindGroups.screenSpace.group);
       renderPass.setBindGroup(1, renderer.bindGroups.textAtlas.group);
-      renderPass.setVertexBuffer(0, renderer.meshes.glyphQuad.vertexBuffer);
-      renderPass.setVertexBuffer(1, renderer.glyphIB);
+      renderPass.setVertexBuffer(0, renderer.meshes.atlasQuad.vertexBuffer);
+      renderPass.setVertexBuffer(1, renderer.atlasIB);
       renderPass.setIndexBuffer(
-        renderer.meshes.glyphQuad.indexBuffer,
+        renderer.meshes.atlasQuad.indexBuffer,
         "uint16"
       );
       // Start at instance worldGlyphCount since UI text data follows world text in buffer
@@ -291,8 +291,8 @@ async function main() {
 
     renderer.staticGeoInstanceOffset = 0;
     renderer.staticGeoInstanceCount = 0;
-    renderer.glyphInstanceOffset = 0;
-    renderer.glyphInstanceCount = 0;
+    renderer.atlasInstanceOffset = 0;
+    renderer.atlasInstanceCount = 0;
     renderer.renderQueue.length = 0;
 
     renderer.particleShouldUseAB = !renderer.particleShouldUseAB;

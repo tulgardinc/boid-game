@@ -7,10 +7,6 @@ import fontAtlasUrl from "./font-atlases/DejaVu_Sans_Mono.png";
 import { getBoidIndexBufer, getBoidVertexBuffer } from "./meshes/boid";
 import { getQuadVertexBuffer, getQuadIndexBuffer } from "./meshes/quad";
 import {
-  getGlyphQuadVertexBuffer,
-  getGlyphQuadIndexBuffer,
-} from "./meshes/glyphQuad";
-import {
   get2DTransformPipeline,
   getParticleDrawListPipeline,
   getParticleRenderPipeline,
@@ -46,8 +42,8 @@ import {
 export type Renderer = {
   staticGeoInstanceCount: number;
   staticGeoInstanceOffset: number;
-  glyphInstanceCount: number;
-  glyphInstanceOffset: number;
+  atlasInstanceCount: number;
+  atlasInstanceOffset: number;
   cameraUB: GPUBuffer;
   screenSpaceUB: GPUBuffer;
   trailVB: GPUBuffer;
@@ -61,10 +57,10 @@ export type Renderer = {
   particleEmitterSB: GPUBuffer;
   particleRingCursorSB: GPUBuffer;
   particleShouldUseAB: boolean;
-  glyphIB: GPUBuffer;
-  glyphAtlasT: GPUTexture;
-  glyphAtlasTV: GPUTextureView;
-  glyphAtlasSMP: GPUSampler;
+  atlasIB: GPUBuffer;
+  textAtlasT: GPUTexture;
+  textAtlasTV: GPUTextureView;
+  textAtlasSMP: GPUSampler;
   shaders: {
     coloredTransform: GPUShaderModule;
     trail: GPUShaderModule;
@@ -75,7 +71,7 @@ export type Renderer = {
   meshes: {
     quad: Mesh;
     boid: Mesh;
-    glyphQuad: Mesh;
+    atlasQuad: Mesh;
   };
   renderPipelines: {
     worldTF2D: GPURenderPipeline;
@@ -155,7 +151,7 @@ const vertexBufferLayouts: { [k: string]: GPUVertexBufferLayout } = {
       },
     ],
   },
-  textGlyph: {
+  atlasQuad: {
     arrayStride: 2 * 4,
     stepMode: "vertex",
     attributes: [
@@ -198,7 +194,7 @@ const instanceBufferLayouts: { [k: string]: GPUVertexBufferLayout } = {
       },
     ],
   },
-  textGlyphInstance: {
+  atlasQuadInstance: {
     arrayStride: 12 * 4, // 48 bytes: color(4) + uvMin(2) + uvMax(2) + pos(2) + scale(1) + padding(1)
     stepMode: "instance",
     attributes: [
@@ -418,7 +414,7 @@ function initScreenSpaceBuffer(device: GPUDevice) {
   return buffer;
 }
 
-function initGlyphInstanceBuffer(device: GPUDevice) {
+function initAtlasInstanceBuffer(device: GPUDevice) {
   // Per instance (12 floats = 48 bytes):
   // color: vec4<f32> (4 floats)
   // uvMin: vec2<f32> (2 floats)
@@ -432,7 +428,7 @@ function initGlyphInstanceBuffer(device: GPUDevice) {
   });
 }
 
-async function initGlyphAtlasTexture(device: GPUDevice) {
+async function initTextAtlasTexture(device: GPUDevice) {
   const response = await fetch(fontAtlasUrl);
   const blob = await response.blob();
   const imageBitmap = await createImageBitmap(blob);
@@ -457,7 +453,7 @@ async function initGlyphAtlasTexture(device: GPUDevice) {
   return { texture, textureView };
 }
 
-function initGlyphAtlasSampler(device: GPUDevice) {
+function initTextAtlasSampler(device: GPUDevice) {
   return device.createSampler({
     magFilter: "nearest",
     minFilter: "nearest",
@@ -536,17 +532,17 @@ export async function initRenderer(
     particleStateSBB
   );
 
-  const glyphIB = initGlyphInstanceBuffer(device);
-  const { texture: glyphAtlasT, textureView: glyphAtlasTV } =
-    await initGlyphAtlasTexture(device);
-  const glyphAtlasSMP = initGlyphAtlasSampler(device);
+  const atlasIB = initAtlasInstanceBuffer(device);
+  const { texture: textAtlasT, textureView: textAtlasTV } =
+    await initTextAtlasTexture(device);
+  const textAtlasSMP = initTextAtlasSampler(device);
 
   const textAtlasLayout = getTextAtlasBindGroupLayout(device);
   const textAtlasGroup = getTextAtlasBindGroup(
     device,
     textAtlasLayout,
-    glyphAtlasTV,
-    glyphAtlasSMP
+    textAtlasTV,
+    textAtlasSMP
   );
 
   const bindGroups: Renderer["bindGroups"] = {
@@ -588,11 +584,15 @@ export async function initRenderer(
     text: getShaderText(device),
   };
 
+  // Create shared quad buffers
+  const quadVertexBuffer = getQuadVertexBuffer(device);
+  const quadIndexBuffer = getQuadIndexBuffer(device);
+
   renderer = {
     staticGeoInstanceCount: 0,
     staticGeoInstanceOffset: 0,
-    glyphInstanceCount: 0,
-    glyphInstanceOffset: 0,
+    atlasInstanceCount: 0,
+    atlasInstanceOffset: 0,
     cameraUB,
     screenSpaceUB,
     trailVB: initTrailVertexBuffer(device),
@@ -606,14 +606,14 @@ export async function initRenderer(
     particleEmitterSB,
     particleRingCursorSB,
     particleShouldUseAB: false,
-    glyphIB,
-    glyphAtlasT,
-    glyphAtlasTV,
-    glyphAtlasSMP,
+    atlasIB,
+    textAtlasT,
+    textAtlasTV,
+    textAtlasSMP,
     meshes: {
       quad: {
-        vertexBuffer: getQuadVertexBuffer(device),
-        indexBuffer: getQuadIndexBuffer(device),
+        vertexBuffer: quadVertexBuffer,
+        indexBuffer: quadIndexBuffer,
         vertexBufferLayoutId: "pos2D",
         instanceBufferLayoutId: "transform2D",
       },
@@ -623,11 +623,11 @@ export async function initRenderer(
         vertexBufferLayoutId: "pos2D",
         instanceBufferLayoutId: "transform2D",
       },
-      glyphQuad: {
-        vertexBuffer: getGlyphQuadVertexBuffer(device),
-        indexBuffer: getGlyphQuadIndexBuffer(device),
-        vertexBufferLayoutId: "textGlyph",
-        instanceBufferLayoutId: "textGlyphInstance",
+      atlasQuad: {
+        vertexBuffer: quadVertexBuffer, // Share with quad
+        indexBuffer: quadIndexBuffer, // Share with quad
+        vertexBufferLayoutId: "atlasQuad",
+        instanceBufferLayoutId: "atlasQuadInstance",
       },
     },
     renderPipelines: {
