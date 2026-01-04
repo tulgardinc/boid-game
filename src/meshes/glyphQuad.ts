@@ -4,13 +4,8 @@ import {
   ATLAS_SIZE,
   GLYPH_WIDTH,
   GLYPH_HEIGHT,
-  GLYPHS_PER_ROW,
-  GLYPH_UV_WIDTH,
-  GLYPH_UV_HEIGHT,
   FIRST_CHAR_CODE,
   GLYPH_SPACING,
-  TEXT_INSTANCE_STRIDE,
-  GLYPH_ASPECT_RATIO,
 } from "../constants";
 
 // prettier-ignore
@@ -27,6 +22,13 @@ const indices = new Uint16Array([
   0, 1, 2,
   2, 1, 3,
 ]);
+
+const GLYPHS_PER_ROW = Math.floor(ATLAS_SIZE / GLYPH_WIDTH); // 16
+const GLYPH_UV_WIDTH = GLYPH_WIDTH / ATLAS_SIZE;
+const GLYPH_UV_HEIGHT = GLYPH_HEIGHT / ATLAS_SIZE;
+
+const GLYPH_ASPECT_RATIO = GLYPH_WIDTH / GLYPH_HEIGHT;
+const TEXT_INSTANCE_STRIDE = 12; // floats: color(4) + uvMin(2) + uvMax(2) + pos(2) + scale(1) + padding(1)
 
 export function getGlyphQuadVertexBuffer(device: GPUDevice) {
   const vertexBuffer = device.createBuffer({

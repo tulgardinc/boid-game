@@ -5,7 +5,7 @@ const CAM_TRANSITION_HL = 0.06;
 
 function approach(cur: number, target: number) {
   if (Math.abs(target - cur) <= 0.001) return target;
-  return expApproach(cur, target, state.time.deltaTime, CAM_TRANSITION_HL);
+  return expApproach(cur, target, state.time.uiTime.delta, CAM_TRANSITION_HL);
 }
 
 export function cameraUpdate() {

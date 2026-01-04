@@ -189,6 +189,11 @@ const colors = {
   innerHelthhBar: { r: 0.9, g: 0, b: 0 },
 };
 
+export enum Screen {
+  GameWorld = 0,
+  UI = 1,
+}
+
 export const state = {
   currentId: 0,
   freedIds: Array<number>(),
@@ -316,7 +321,16 @@ export const state = {
   time: {
     deltaTime: 0,
     lastTime: 0,
-    now: 0,
+    simTime: {
+      now: 0,
+      delta: 0,
+      multiplier: 1,
+    },
+    uiTime: {
+      now: 0,
+      delta: 0,
+      multiplier: 1,
+    },
   },
   deleteSchedule: Array<number>(),
   nextAsteroidSpawn: 0,
@@ -334,7 +348,7 @@ export const state = {
     x: 0,
     y: 0,
     r: 0,
-    zoom: 1.1,
+    zoom: 0.5,
     target: {
       x: 0,
       y: 0,
@@ -345,11 +359,10 @@ export const state = {
   canvas: {
     width: 0,
     height: 0,
-    widthRaw: 0,
-    heightRaw: 0,
   },
   scoreBoardIdx: 0,
   score: 0,
+  activeScreen: Screen.GameWorld,
 };
 
 export function swapDeleteTrail(ownerId: number) {
@@ -502,7 +515,14 @@ export function deleteScheduledEntities() {
 export function updateGameTime() {
   const current = Date.now();
   state.time.deltaTime = (current - state.time.lastTime) / 1000;
-  state.time.now += state.time.deltaTime;
+
+  state.time.simTime.delta =
+    state.time.deltaTime * state.time.simTime.multiplier;
+  state.time.simTime.now += state.time.simTime.delta;
+
+  state.time.uiTime.delta = state.time.deltaTime * state.time.uiTime.multiplier;
+  state.time.uiTime.now += state.time.uiTime.delta;
+
   state.time.lastTime = current;
 }
 
@@ -520,8 +540,8 @@ function registerEvents() {
 export function initializeState() {
   const now = Date.now();
   state.time.lastTime = now;
-  state.time.now = 0;
-  state.nextAsteroidSpawn = state.time.now + 1;
+  state.time.simTime.now = 0;
+  state.nextAsteroidSpawn = state.time.simTime.now + 1;
 
   registerEvents();
 

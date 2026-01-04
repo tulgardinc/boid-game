@@ -919,8 +919,8 @@ export function setupParticleRendering(device: GPUDevice) {
   paramDv.setUint32(0, MAX_PARTICLE_COUNT, true);
   paramDv.setUint32(4, state.particleEmitters.len, true);
   paramDv.setUint32(8, newParticleCount, true);
-  paramDv.setUint32(12, Math.floor(state.time.now % 10000), true);
-  paramDv.setFloat32(16, state.time.deltaTime, true);
+  paramDv.setUint32(12, Math.floor(state.time.simTime.now % 10000), true);
+  paramDv.setFloat32(16, state.time.simTime.delta, true);
 
   device.queue.writeBuffer(renderer.particleParametersUB, 0, paramsBuffer);
 }

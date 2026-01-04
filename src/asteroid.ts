@@ -178,19 +178,19 @@ export function asteroidUpdate() {
   const ad = state.asteroids.data;
   const d = state.baseEntities.data;
 
-  if (state.time.now >= state.nextAsteroidSpawn) {
+  if (state.time.simTime.now >= state.nextAsteroidSpawn) {
     createAsteroid();
-    state.nextAsteroidSpawn = state.time.now + 1;
+    state.nextAsteroidSpawn = state.time.simTime.now + 1;
   }
 
   for (let i = 0; i < state.asteroids.len; i++) {
     const baseIdx = state.asteroids.data.baseIdx[i];
 
     if (ad.health[i] <= 0 && ad.deathExpirey[i] == null) {
-      ad.deathExpirey[i] = state.time.now + ASTEROID_DEATH_DELAY;
+      ad.deathExpirey[i] = state.time.simTime.now + ASTEROID_DEATH_DELAY;
     }
 
-    if (ad.deathExpirey[i] && state.time.now >= ad.deathExpirey[i]!) {
+    if (ad.deathExpirey[i] && state.time.simTime.now >= ad.deathExpirey[i]!) {
       state.score += 50;
       spawnAsteroidDeathParticles(d.x[baseIdx], d.y[baseIdx], d.r[baseIdx]);
       scheduleAsteroidForDelete(d.entityId[baseIdx]);
@@ -208,7 +208,7 @@ export function asteroidUpdate() {
     if (
       ad.damageColorExpiry[i] &&
       !ad.deathExpirey[i] &&
-      state.time.now >= ad.damageColorExpiry[i]!
+      state.time.simTime.now >= ad.damageColorExpiry[i]!
     ) {
       ad.damageColorExpiry[i] = null;
       state.baseEntities.data.color[baseIdx] = state.colors.asteroid;
@@ -223,7 +223,7 @@ export function asteroidUpdate() {
           ad.defaultScale[i] * scaleMult;
         state.baseEntities.data.scaleY[baseIdx] =
           ad.defaultScale[i] * scaleMult;
-        ad.shrinkTimer[i]! -= state.time.deltaTime;
+        ad.shrinkTimer[i]! -= state.time.simTime.delta;
       } else {
         ad.shrinkTimer[i] = null;
         state.baseEntities.data.scaleX[baseIdx] = ad.defaultScale[i];
@@ -231,7 +231,7 @@ export function asteroidUpdate() {
       }
     }
 
-    if (ad.stopExpirey[i] && state.time.now >= ad.stopExpirey[i]!) {
+    if (ad.stopExpirey[i] && state.time.simTime.now >= ad.stopExpirey[i]!) {
       ad.stopExpirey[i] = null;
       ad.recoverKnockbackTimer[i] = ASTEROID_KNOCKBACK_RECOVERY_DURATION;
       d.velR[baseIdx] = ad.knockbackVelRStore[i] + ad.knockbackVelRDelta[i];
@@ -247,7 +247,7 @@ export function asteroidUpdate() {
         Math.sign(d.velR[baseIdx]) * ASTEROID_MAX_VEL_R,
         ASTEROID_RETURN_VEL_R_SPEED,
         ASTEROID_MAX_VEL_R / 4,
-        state.time.deltaTime
+        state.time.simTime.delta
       );
     }
 
@@ -265,7 +265,7 @@ export function asteroidUpdate() {
           ad.knockbackVelY[i],
           ad.defaultVelY[i]
         );
-        ad.recoverKnockbackTimer[i]! -= state.time.deltaTime;
+        ad.recoverKnockbackTimer[i]! -= state.time.simTime.delta;
       } else {
         ad.recoverKnockbackTimer[i] = null;
         d.velX[baseIdx] = ad.defaultVelX[i];
@@ -276,7 +276,7 @@ export function asteroidUpdate() {
 
   // Remove expired hurt cooldowns
   for (let i = state.hurtCooldowns.len - 1; i >= 0; i--) {
-    if (state.time.now >= state.hurtCooldowns.data.expiry[i]) {
+    if (state.time.simTime.now >= state.hurtCooldowns.data.expiry[i]) {
       removeHurtCooldown(i);
     }
   }

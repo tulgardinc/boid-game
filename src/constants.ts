@@ -71,13 +71,8 @@ export const PARTICLE_COMPUTE_WORKGROUP_SIZE = 256;
 export const ATLAS_SIZE = 1024;
 export const GLYPH_WIDTH = 64;
 export const GLYPH_HEIGHT = 100;
-export const GLYPHS_PER_ROW = Math.floor(ATLAS_SIZE / GLYPH_WIDTH); // 16
-export const GLYPH_UV_WIDTH = GLYPH_WIDTH / ATLAS_SIZE;
-export const GLYPH_UV_HEIGHT = GLYPH_HEIGHT / ATLAS_SIZE;
 export const FIRST_CHAR_CODE = 32; // Space character " "
 export const GLYPH_SPACING = 0.8; // Multiplier for distance between glyphs
-export const GLYPH_ASPECT_RATIO = 0.6;
-export const TEXT_INSTANCE_STRIDE = 12; // floats: color(4) + uvMin(2) + uvMax(2) + pos(2) + scale(1) + padding(1)
 
 // ----------------------------------------------------------------------------
 // Canvas
@@ -91,3 +86,10 @@ export const DEFAULT_CANVAS_HEIGHT = 1080;
 // ----------------------------------------------------------------------------
 
 export const TRAIL_VISUAL_WIDTH = 6;
+
+// ----------------------------------------------------------------------------
+// Locations
+// ----------------------------------------------------------------------------
+
+export const UI_TRANSITION_DURATION = 2.0;
+export const UI_DISTANCE = 300;

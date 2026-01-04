@@ -4,7 +4,7 @@ import {
   deleteScheduledEntities,
   state,
   TextAlign,
-  TextAnchor,
+  Screen,
 } from "./state";
 import "./style.css";
 import { asteroidUpdate } from "./asteroid";
@@ -33,7 +33,12 @@ import {
   getWorldGlyphCount,
 } from "./meshes/glyphQuad";
 import { updateBoids, updateBoidTrails } from "./boid";
-import { detectCollisionsOBB, handleCollisions, physicsUpdate } from "./util";
+import {
+  detectCollisionsOBB,
+  getUICamPos,
+  handleCollisions,
+  physicsUpdate,
+} from "./util";
 import { updateHealthBars } from "./healthbar";
 import { cameraUpdate } from "./camera";
 import { appendSoA } from "./SoA";
@@ -104,6 +109,15 @@ async function main() {
     align: TextAlign.Right,
   });
 
+  const uiText = appendSoA(state.worldTexts, {
+    x: 0,
+    y: 0,
+    scale: 70,
+    color: "asteroid",
+    content: "UI Text",
+    align: TextAlign.Center,
+  });
+
   function render() {
     // system logic
     updateGameTime();
@@ -118,6 +132,8 @@ async function main() {
       (canvas.width * 1) / state.camera.zoom / 2 - 20;
     state.worldTexts.data.y[state.scoreBoardIdx] =
       (canvas.height * 1) / state.camera.zoom / 2 - 70;
+
+    state.worldTexts.data.x[uiText] = getUICamPos();
 
     // deletetions
     deleteScheduledEntities();
@@ -327,9 +343,34 @@ async function main() {
 
   window.addEventListener("resize", configureContext);
 
+  window.addEventListener("keydown", (event) => {
+    console.log(event.key);
+    if (event.key === "Escape") {
+      event.preventDefault();
+
+      if (state.activeScreen === Screen.GameWorld) {
+        switchToUIScreen();
+      } else if (state.activeScreen === Screen.UI) {
+        switchToGWScreen();
+      }
+    }
+  });
+
   configureContext();
 
   render();
 }
 
 await main();
+
+function switchToUIScreen() {
+  state.activeScreen = Screen.UI;
+  state.camera.target.x = getUICamPos();
+  state.time.simTime.multiplier = 0;
+}
+
+function switchToGWScreen() {
+  state.activeScreen = Screen.GameWorld;
+  state.camera.target.x = 0;
+  state.time.simTime.multiplier = 1;
+}

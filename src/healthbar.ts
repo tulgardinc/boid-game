@@ -147,7 +147,7 @@ export function updateHealthBars() {
           expApproach(
             trWidth,
             trueWidth,
-            state.time.deltaTime,
+            state.time.simTime.delta,
             TRANSITION_HALFLIFE
           )
         ),

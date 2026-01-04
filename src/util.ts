@@ -10,6 +10,7 @@ import {
   ASTEROID_HIT_SCALE,
   ASTEROID_SHRINK_DURATION,
   ASTEROID_STOP_DURATION,
+  UI_DISTANCE,
 } from "./constants";
 
 // Collision response constants
@@ -44,13 +45,13 @@ export function physicsUpdate() {
   for (let i = 0; i < state.baseEntities.len; i++) {
     const d = state.baseEntities.data;
 
-    d.velX[i] += d.aclX[i] * state.time.deltaTime;
-    d.velY[i] += d.aclY[i] * state.time.deltaTime;
-    d.velR[i] += d.aclR[i] * state.time.deltaTime;
+    d.velX[i] += d.aclX[i] * state.time.simTime.delta;
+    d.velY[i] += d.aclY[i] * state.time.simTime.delta;
+    d.velR[i] += d.aclR[i] * state.time.simTime.delta;
 
-    d.x[i] += d.velX[i] * state.time.deltaTime;
-    d.y[i] += d.velY[i] * state.time.deltaTime;
-    d.r[i] = d.r[i] + ((d.velR[i] * state.time.deltaTime) % 360);
+    d.x[i] += d.velX[i] * state.time.simTime.delta;
+    d.y[i] += d.velY[i] * state.time.simTime.delta;
+    d.r[i] = d.r[i] + ((d.velR[i] * state.time.simTime.delta) % 360);
   }
 }
 
@@ -220,7 +221,7 @@ export function handleCollisions() {
       state.asteroids.data.health[astrIdx] -= BOID_DAMAGE;
 
       state.asteroids.data.damageColorExpiry[astrIdx] =
-        state.time.now + ASTEROID_DAMAGE_COLOR_DURATION;
+        state.time.simTime.now + ASTEROID_DAMAGE_COLOR_DURATION;
       d.color[astrBaseIdx] = state.colors.asteroidHurt;
 
       state.asteroids.data.shrinkTimer[astrIdx] = ASTEROID_SHRINK_DURATION;
@@ -229,7 +230,7 @@ export function handleCollisions() {
       state.baseEntities.data.scaleY[astrBaseIdx] = ASTEROID_HIT_SCALE;
 
       state.asteroids.data.stopExpirey[astrIdx] =
-        state.time.now + ASTEROID_STOP_DURATION;
+        state.time.simTime.now + ASTEROID_STOP_DURATION;
       d.velX[astrBaseIdx] = 0;
       d.velY[astrBaseIdx] = 0;
       state.asteroids.data.knockbackVelRStore[astrIdx] = d.velR[astrBaseIdx];
@@ -280,7 +281,7 @@ export function handleCollisions() {
       addHurtCooldown(
         asteroidId,
         boidId,
-        state.time.now + HURT_COOLDOWN_DURATION
+        state.time.simTime.now + HURT_COOLDOWN_DURATION
       );
     }
   }
@@ -342,4 +343,8 @@ export function moveTowardsArrive(
   const step = speed * dt;
 
   return dist <= step ? target : current + Math.sign(delta) * step;
+}
+
+export function getUICamPos() {
+  return -state.canvas.width - UI_DISTANCE;
 }
